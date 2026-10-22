@@ -101,7 +101,7 @@ export function ProductListingPage({
           No products match these filters. Try a different category or price range.
         </div>
       ) : (
-        <div className="mt-8 grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
           {products.map((product) => (
             <ProductCard
               key={product.id}

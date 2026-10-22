@@ -110,7 +110,8 @@ export function HomePage({
       {error ? (
         <div className="mt-10 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{error}</div>
       ) : loading ? (
-        <div className="mt-10 grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
+          <div className="h-72 animate-pulse rounded-2xl bg-orange-100" />
           <div className="h-72 animate-pulse rounded-2xl bg-orange-100" />
           <div className="h-72 animate-pulse rounded-2xl bg-orange-100" />
           <div className="h-72 animate-pulse rounded-2xl bg-orange-100" />
@@ -176,7 +177,7 @@ function ProductSection({
           {t('noProducts')}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
           {products.map((product) => (
             <ProductCard
               key={product.id}

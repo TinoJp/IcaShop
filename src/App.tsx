@@ -12,12 +12,13 @@ import {
 import {
   ChevronDown,
   Grid2X2,
+  Heart,
   Home as HomeIcon,
   LayoutGrid,
   LogOut,
-  Menu,
   Search,
   ShoppingBag,
+  Store,
   UserRound,
   X,
 } from 'lucide-react';
@@ -76,10 +77,14 @@ function authErrorMessage(err: { code?: string; message?: string; status?: numbe
 }
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [pathname]);
+    if (hash) {
+      document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [pathname, hash]);
   return null;
 }
 
@@ -313,6 +318,7 @@ function AppContent() {
   const openListing = () => navigate('/products');
   const openHome = () => navigate('/');
   const openOrders = () => navigate('/account/orders');
+  const openCategories = () => navigate('/#categories');
   const openAdmin = () => navigate('/admin');
   const openAccountOrLogin = () => navigate(user ? '/account' : '/login');
   const openCheckout = () => {
@@ -544,7 +550,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF7F4] text-[#0F172A]">
+    <div className="min-h-screen bg-[#FAF7F4] pb-24 text-[#0F172A] lg:pb-0">
       <ScrollToTop />
 
       <div className="bg-[#0F172A] px-4 py-2 text-[11px] font-medium text-white/80 sm:px-8">
@@ -559,13 +565,6 @@ function AppContent() {
 
       <header className="sticky top-0 z-30 border-b border-orange-100 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-4 sm:px-8">
-          <button
-            className="rounded-xl p-2 hover:bg-orange-50 lg:hidden"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Open menu"
-          >
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
           <button onClick={openHome} className="flex shrink-0 items-center gap-2" aria-label="iCa home">
             <img src="/logo.jpeg" alt="iCa Shop it Love it logo" className="h-12 w-12 rounded-2xl object-cover shadow-sm" />
             <span className="hidden text-lg font-black tracking-tight sm:block">
@@ -621,11 +620,17 @@ function AppContent() {
             <UserRound size={17} /> {user ? profile?.full_name || t('myAccount') : t('signIn')}
           </button>
         </div>
-        {menuOpen && (
-          <div className="border-t border-orange-100 px-4 py-3 lg:hidden">
+      </header>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <button
+            className="absolute inset-0 bg-slate-900/20"
+            onClick={() => setMenuOpen(false)}
+            aria-label="Close menu"
+          />
+          <div className="absolute bottom-24 left-4 right-4 max-h-[70vh] overflow-y-auto rounded-2xl border border-orange-100 bg-white p-3 shadow-xl">
             <nav className="flex flex-col gap-1 text-sm font-semibold">
-              <button onClick={() => { openHome(); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">{t('home')}</button>
-              <button onClick={() => { openListing(); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">{t('products')}</button>
               <button onClick={() => { openOrders(); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">{t('myOrders')}</button>
               {profile?.role === 'admin' && (
                 <button onClick={() => { openAdmin(); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left font-bold text-orange-600 hover:bg-orange-50">{t('adminDashboard')}</button>
@@ -651,8 +656,8 @@ function AppContent() {
               </button>
             </nav>
           </div>
-        )}
-      </header>
+        </div>
+      )}
 
       <main id="top" className="mx-auto max-w-7xl px-4 pb-16 pt-5 sm:px-8">
         {showSidebar ? (
@@ -723,6 +728,50 @@ function AppContent() {
         onRemove={cart.remove}
         onCheckout={openCheckout}
       />
+
+      {!cartOpen && (
+        <nav
+          aria-label="Mobile navigation"
+          className="fixed inset-x-0 bottom-0 z-50 flex items-stretch justify-around border-t border-orange-100 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 shadow-[0_-6px_24px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden"
+        >
+          <button
+            onClick={() => { setMenuOpen(false); openHome(); }}
+            aria-current={pathname === '/' ? 'page' : undefined}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-semibold ${pathname === '/' ? 'bg-orange-50 text-orange-600' : 'text-slate-500'}`}
+          >
+            <HomeIcon size={21} /> <span className="truncate">{t('home')}</span>
+          </button>
+          <button
+            onClick={() => { setMenuOpen(false); openListing(); }}
+            aria-current={pathname.startsWith('/products') ? 'page' : undefined}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-semibold ${pathname.startsWith('/products') ? 'bg-orange-50 text-orange-600' : 'text-slate-500'}`}
+          >
+            <Grid2X2 size={21} /> <span className="truncate">{t('products')}</span>
+          </button>
+          <button
+            onClick={() => { setMenuOpen(false); openCategories(); }}
+            aria-current={pathname === '/' && location.hash === '#categories' ? 'location' : undefined}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-semibold ${pathname === '/' && location.hash === '#categories' ? 'bg-orange-50 text-orange-600' : 'text-slate-500'}`}
+          >
+            <Store size={21} /> <span className="truncate">{t('allShops')}</span>
+          </button>
+          <button
+            onClick={() => { setMenuOpen(false); navigate('/account/saved'); }}
+            aria-current={pathname === '/account/saved' ? 'page' : undefined}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-semibold ${pathname === '/account/saved' ? 'bg-orange-50 text-orange-600' : 'text-slate-500'}`}
+          >
+            <Heart size={21} /> <span className="truncate">{t('savedItems')}</span>
+          </button>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-expanded={menuOpen}
+            aria-label={t('more')}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl py-2 text-[10px] font-semibold ${menuOpen ? 'bg-orange-50 text-orange-600' : 'text-slate-500'}`}
+          >
+            <LayoutGrid size={21} /> <span className="truncate">{t('more')}</span>
+          </button>
+        </nav>
+      )}
     </div>
   );
 }

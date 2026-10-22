@@ -14,10 +14,11 @@ type SavedPageProps = {
 export function SavedPage({ products, loading, onSave, onAdd, onOpen }: SavedPageProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
         <div className="h-72 animate-pulse rounded-2xl bg-orange-100" />
         <div className="h-72 animate-pulse rounded-2xl bg-orange-100" />
-        <div className="hidden h-72 animate-pulse rounded-2xl bg-orange-100 md:block" />
+        <div className="h-72 animate-pulse rounded-2xl bg-orange-100" />
+        <div className="h-72 animate-pulse rounded-2xl bg-orange-100" />
       </div>
     );
   }
@@ -49,7 +50,7 @@ export function SavedPage({ products, loading, onSave, onAdd, onOpen }: SavedPag
           {products.length} item{products.length === 1 ? '' : 's'} saved.
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
         {products.map((product) => (
           <ProductCard
             key={product.id}
