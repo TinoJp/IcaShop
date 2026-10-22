@@ -1,0 +1,10 @@
+export type Category = { id: string; name: string; slug: string };
+export type Product = { id: string; category_id: string; name: string; slug: string; description: string; price: number; sale_price: number | null; stock: number; image_url?: string | null; created_at?: string };
+export type ProductAdmin = Product & { sku: string; is_active: boolean; is_archived: boolean };
+export type CartItem = { product: Product; quantity: number };
+export type OrderStatus = 'pending' | 'delivered' | 'cancelled';
+export type PaymentStatus = 'unpaid' | 'paid';
+export type OrderRow = { id: string; status: OrderStatus; payment_status?: PaymentStatus; total_amount: number; delivery_fee: number; grand_total: number; customer_name: string; customer_phone: string; delivery_address: string; payment_method: string; notes: string; created_at: string };
+export type OrderItemRow = { id: string; order_id: string; product_id: string | null; product_name: string; unit_price: number; quantity: number; line_total: number };
+export type OrderWithItems = OrderRow & { order_items: OrderItemRow[] };
+export type Profile = { id: string; full_name: string; phone: string; address: string; role: 'customer' | 'admin' };
