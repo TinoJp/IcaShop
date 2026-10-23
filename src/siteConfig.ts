@@ -16,7 +16,7 @@ export type SiteConfig = {
 
 export const siteConfig: SiteConfig = {
   // Country code first, digits only, e.g. '255712345678'
-  whatsapp: '+255627085204',
+  whatsapp: '+255684312982',
   // How the number should look on screen, e.g. '+255 712 345 678'
   phone: '+255684312982',
   email: 'abbybenjamin94@gmail.com',
