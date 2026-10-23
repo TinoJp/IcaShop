@@ -55,6 +55,10 @@ const translations = {
     chatWhatsapp: 'Chat on WhatsApp',
     followUs: 'Follow us',
     backToTop: 'Back to top',
+    heroTitleA: 'Find it. Love it.',
+heroTitleB: 'Buy it.',
+shopNow: 'Shop now',
+popularSearches: 'Popular searches',
   },
   sw: {
     // App shell
@@ -108,6 +112,10 @@ const translations = {
     chatWhatsapp: 'Ongea nasi WhatsApp',
     followUs: 'Tufuatilie',
     backToTop: 'Rudi juu',
+    heroTitleA: 'Ipate. Ipende.',
+heroTitleB: 'Inunue.',
+shopNow: 'Nunua sasa',
+popularSearches: 'Zinazotafutwa sana',
   },
 } as const;
 

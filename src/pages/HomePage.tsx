@@ -21,6 +21,10 @@ const categoryIcons: Record<string, typeof Laptop> = {
   'toys-games': Baby,
 };
 
+// Words shown under the hero button. Clicking one searches for it.
+// Change these to words that match products you actually sell.
+const popularSearches = ['Smartphones', 'Laptops', 'Shoes', 'Watches', 'Headphones'];
+
 type HomePageProps = {
   categories: Category[];
   saleProducts: Product[];
@@ -31,6 +35,7 @@ type HomePageProps = {
   error: string;
   onCategory: (id: string) => void;
   onExplore: () => void;
+  onSearch?: (term: string) => void;
   onSave: (id: string) => void;
   onAdd: (product: Product, quantity?: number) => void;
   onOpen: (product: Product) => void;
@@ -46,6 +51,7 @@ export function HomePage({
   error,
   onCategory,
   onExplore,
+  onSearch,
   onSave,
   onAdd,
   onOpen,
@@ -54,27 +60,46 @@ export function HomePage({
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-3xl bg-orange-500 px-6 py-10 text-white shadow-xl shadow-orange-500/15 sm:px-12 sm:py-14">
-        <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full border-[28px] border-orange-300/40" />
-        <div className="absolute -bottom-28 right-28 h-48 w-48 rounded-full bg-orange-400/50" />
-        <div className="relative max-w-lg">
-          <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-orange-100">
-            <Sparkles size={16} /> {t('heroTag')}
-          </p>
-          <h1 className="max-w-xl text-4xl font-black leading-[1.05] tracking-tight sm:text-6xl">
-            {t('heroLine1')}
-            <br />
-            <span className="text-orange-100">{t('heroLine2')}</span>
-          </h1>
-          <p className="mt-5 max-w-md text-sm leading-6 text-orange-50 sm:text-base">
-            {t('heroDesc')}
-          </p>
-          <button
-            onClick={onExplore}
-            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-orange-600 shadow-lg transition hover:-translate-y-0.5"
-          >
-            {t('exploreProducts')} <ArrowRight size={17} />
-          </button>
+      <section className="relative overflow-hidden rounded-3xl bg-[#FEEFEA] shadow-sm ring-1 ring-orange-100">
+        <div className="grid items-center md:grid-cols-[1fr_1.05fr]">
+          <div className="relative z-10 px-6 pb-2 pt-10 sm:px-12 sm:pt-14 md:pb-14">
+            <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+              {t('heroTitleA')}
+              <br />
+              <span className="text-orange-500">{t('heroTitleB')}</span>
+            </h1>
+            <p className="mt-5 max-w-md text-sm leading-6 text-slate-600 sm:text-base">{t('heroDesc')}</p>
+            <button
+              onClick={onExplore}
+              className="mt-7 inline-flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-orange-600"
+            >
+              {t('shopNow')} <ArrowRight size={17} />
+            </button>
+
+            {onSearch && popularSearches.length > 0 && (
+              <div className="mt-8 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-slate-800">{t('popularSearches')}:</span>
+                {popularSearches.map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => onSearch(term)}
+                    className="rounded-full border border-orange-100 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-orange-400 hover:text-orange-600"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <img
+            src="/hero-products.webp"
+            alt=""
+            width={1247}
+            height={864}
+            fetchPriority="high"
+            className="h-auto w-full [-webkit-mask-image:linear-gradient(to_right,transparent_4.5%,black_9%)] [mask-image:linear-gradient(to_right,transparent_4.5%,black_9%)]"
+          />
         </div>
       </section>
 
