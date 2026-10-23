@@ -84,6 +84,9 @@ export function Footer({ categories, onCategory }: FooterProps) {
               <Link to="/" className={linkClass}>{t('home')}</Link>
             </li>
             <li>
+              <Link to="/about" className={linkClass}>{t('aboutUs')}</Link>
+            </li>
+            <li>
               <button onClick={() => onCategory('all')} className={linkClass}>{t('allProducts')}</button>
             </li>
             {categories.slice(0, 5).map((category) => (

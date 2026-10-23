@@ -35,6 +35,7 @@ import { AccountDashboard } from '@/pages/AccountDashboard';
 import { AccountOverview } from '@/pages/AccountOverview';
 import { SavedPage } from '@/pages/SavedPage';
 import { Footer } from '@/pages/Footer';
+import { AboutPage } from '@/pages/AboutPage';
 import { type AuthMode, type AuthPageProps } from '@/pages/useAuthForm';
 import { LoginPage } from '@/pages/LoginPage';
 import { HomePage } from '@/pages/HomePage';
@@ -396,6 +397,8 @@ function AppContent() {
 
   const routes = (
     <Routes>
+      <Route path="/about" element={<AboutPage />} />
+
       <Route
         path="/"
         element={
