@@ -134,6 +134,32 @@ export function AdminTeam(){
 }
 
 export function AdminActivity(){
- type Entry={id:string;action:string;entity_type:string;entity_id:string|null;created_at:string};const [entries,setEntries]=useState<Entry[]>([]),[error,setError]=useState('');useEffect(()=>{let live=true;(async()=>{const {data,error:e}=await supabase.from('admin_audit_log').select('id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(100);if(!live)return;if(e)setError('Activity log requires the admin dashboard migration.');else setEntries(data??[])})();return()=>{live=false}},[]);
- return <section className={box}><h2 className="mb-1 text-lg font-black">Recent admin activity</h2><p className="mb-4 text-sm text-slate-500">Latest changes to orders, products, categories and settings.</p>{error&&<ErrorMessage text={error} />}{entries.map(e=><div key={e.id} className="flex flex-wrap items-center gap-3 border-b border-slate-100 py-3"><span className="rounded-lg bg-orange-50 p-2 text-orange-600"><Tag size={16}/></span><b className="flex-1 capitalize">{e.action} {e.entity_type}</b><small className="text-slate-500">{e.entity_id?.slice(0,8)}</small><time className="text-xs text-slate-500">{new Date(e.created_at).toLocaleString('en-TZ')}</time></div>)}</section>
+ type Entry={id:string;actor_id:string|null;action:string;entity_type:string;entity_id:string|null;created_at:string};
+ const [entries,setEntries]=useState<Entry[]>([]);
+ const [actorNames,setActorNames]=useState<Record<string,string>>({});
+ const [error,setError]=useState('');
+ const [notice,setNotice]=useState('');
+ const [confirming,setConfirming]=useState(false);
+ const [clearing,setClearing]=useState(false);
+ const load=async()=>{
+   const {data,error:e}=await supabase.from('admin_audit_log').select('id,actor_id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(100);
+   if(e){setError('Activity log could not be loaded. Apply the admin dashboard migration and check admin access.');return}
+   const rows=(data??[]) as Entry[];
+   setEntries(rows);
+   const actorIds=[...new Set(rows.flatMap((entry)=>entry.actor_id?[entry.actor_id]:[]))];
+   if(!actorIds.length){setActorNames({});setError('');return}
+   const {data:profiles,error:profileError}=await supabase.from('profiles').select('id,full_name').in('id',actorIds);
+   if(profileError){setError(`Activity log loaded, but admin names could not be loaded: ${profileError.message}`);return}
+   setActorNames(Object.fromEntries((profiles??[]).map((profile)=>[profile.id,profile.full_name.trim().split(/\s+/)[0]||'Unknown admin'])));
+   setError('');
+ };
+ useEffect(()=>{void load()},[]);
+ const clear=async()=>{setClearing(true);setError('');setNotice('');const {data,error:e}=await supabase.rpc('admin_clear_ica_activity_log');if(e)setError(`Could not clear activity log: ${e.message}`);else{setEntries([]);setActorNames({});setConfirming(false);setNotice(`Activity log cleared (${data ?? 0} entries).`)}setClearing(false)};
+ return <section className={box}>
+   {confirming&&<ConfirmDialog title="Clear activity log?" message="This permanently deletes all admin activity records. This cannot be undone." confirmLabel="Clear activity log" busyLabel="Clearing…" busy={clearing} onCancel={()=>setConfirming(false)} onConfirm={()=>void clear()}/>}
+   <div className="mb-4 flex flex-wrap items-start justify-between gap-3"><div><h2 className="mb-1 text-lg font-black">Recent admin activity</h2><p className="text-sm text-slate-500">Latest changes to orders, products, categories and settings.</p></div><button disabled={!entries.length||clearing} onClick={()=>setConfirming(true)} className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700 disabled:opacity-50"><Trash2 size={16}/>Clear logs</button></div>
+   {error&&<ErrorMessage text={error} />}{notice&&<p role="status" className="mb-3 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</p>}
+   {entries.map(e=><div key={e.id} className="flex flex-wrap items-center gap-3 border-b border-slate-100 py-3"><span className="rounded-lg bg-orange-50 p-2 text-orange-600"><Tag size={16}/></span><b className="flex-1 capitalize">{e.action} {e.entity_type}</b><small className="font-semibold text-slate-700">{e.actor_id?actorNames[e.actor_id]||'Unknown admin':'Unknown admin'}</small><small className="text-slate-500">{e.entity_id?.slice(0,8)}</small><time className="text-xs text-slate-500">{new Date(e.created_at).toLocaleString('en-TZ')}</time></div>)}
+   {!error&&!entries.length&&<p className="text-sm text-slate-500">No activity recorded.</p>}
+ </section>
 }

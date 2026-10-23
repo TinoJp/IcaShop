@@ -293,11 +293,22 @@ function AppContent() {
   };
 
   const filteredProducts = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+    const normalize = (value: string) => value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    const searchWords = normalize(searchTerm).trim().split(/\s+/).filter(Boolean);
+    const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
     return products
       .filter((product) => {
         const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
-        const matchesSearch = !term || `${product.name} ${product.description}`.toLowerCase().includes(term);
+        const searchableText = normalize([
+          product.name,
+          product.description,
+          product.slug,
+          categoryNames.get(product.category_id) ?? '',
+        ].join(' '));
+        const matchesSearch = searchWords.every((word) => searchableText.includes(word));
         const matchesPrice = (product.sale_price ?? product.price) <= priceLimit;
         return matchesCategory && matchesSearch && matchesPrice;
       })
@@ -306,7 +317,7 @@ function AppContent() {
         if (sortOrder === 'price-high') return (second.sale_price ?? second.price) - (first.sale_price ?? first.price);
         return 0;
       });
-  }, [products, searchTerm, selectedCategory, priceLimit, sortOrder]);
+  }, [categories, products, searchTerm, selectedCategory, priceLimit, sortOrder]);
 
   const saleProducts = filteredProducts.filter((product) => product.sale_price !== null);
   const newProducts = [...filteredProducts]
@@ -578,6 +589,7 @@ function AppContent() {
             <Search size={19} className="shrink-0 text-orange-500" />
             <input
               value={searchTerm}
+              spellCheck={false}
               onChange={(event) => {
                 setSearchTerm(event.target.value);
                 if (pathname !== '/products') navigate('/products');

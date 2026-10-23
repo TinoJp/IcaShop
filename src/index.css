@@ -34,8 +34,7 @@ input {
 }
 
 button:focus-visible,
-a:focus-visible,
-input:focus-visible {
+a:focus-visible {
   outline: 3px solid rgba(249, 115, 22, 0.4);
   outline-offset: 3px;
 }
