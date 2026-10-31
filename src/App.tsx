@@ -183,9 +183,13 @@ function AppContent() {
         ? 'Shop Products Online in Tanzania | iCa Shop'
         : pathname === '/about'
           ? 'About iCa Shop | Online Shopping in Tanzania'
-          : pathname === '/'
-            ? 'iCa Shop | Great Finds, Delivered Across Tanzania'
-            : 'Page Not Found | iCa Shop';
+          : pathname === '/login'
+            ? 'Sign In | iCa Shop'
+            : pathname === '/register'
+              ? 'Create Account | iCa Shop'
+                : pathname === '/'
+                  ? 'iCa Shop | Great Finds, Delivered Across Tanzania'
+                  : 'Page Not Found | iCa Shop';
     const description = product
       ? `${product.description.slice(0, 145)}${product.description.length > 145 ? '…' : ''} Shop ${product.name} at iCa Shop with delivery across Tanzania.`
       : pathname === '/products'
