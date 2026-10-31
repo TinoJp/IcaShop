@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { EmailField, PasswordField, SubmitButton } from '@/pages/AuthShared';
 import { useAuthForm, type AuthPageProps } from '@/pages/useAuthForm';
 
@@ -40,6 +41,15 @@ export function AuthPage(props: AuthPageProps) {
     >
       {/* light orange tint over the photo */}
       <div className="absolute inset-0 bg-orange-200/40" aria-hidden="true" />
+
+      {/* Back to home */}
+      <Link
+        to="/"
+        className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-xl bg-white/90 px-4 py-2.5 text-sm font-bold text-slate-800 shadow-lg backdrop-blur transition hover:bg-white hover:text-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300 sm:left-6 sm:top-6"
+      >
+        <ArrowLeft size={17} aria-hidden="true" />
+        Back to home
+      </Link>
 
       {/* ─────────── THE BIG DIV ─────────── */}
       <div className="relative grid w-full max-w-4xl overflow-hidden rounded-[32px] bg-white shadow-2xl ring-1 ring-white/40 md:grid-cols-2">
