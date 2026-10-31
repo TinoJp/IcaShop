@@ -41,11 +41,10 @@ import { SavedPage } from '@/pages/SavedPage';
 import { Footer } from '@/pages/Footer';
 import { AboutPage } from '@/pages/AboutPage';
 import { type AuthMode, type AuthPageProps } from '@/pages/useAuthForm';
-import { LoginPage } from '@/pages/LoginPage';
+import { AuthPage } from '@/pages/AuthPage';
 import { HomePage } from '@/pages/HomePage';
 import { ProductDetailPage } from '@/pages/ProductDetailPage';
 import { ProductListingPage } from '@/pages/ProductListingPage';
-import { RegisterPage } from '@/pages/RegisterPage';
 import type { Category, Product, Profile, OrderRow } from '@/types';
 
 // The admin area is only downloaded when an admin opens /admin.
@@ -678,13 +677,26 @@ function AppContent() {
 
       <Route path="/orders" element={<Navigate to="/account/orders" replace />} />
 
+      {/* Login and Register share ONE AuthPage (same key) so the panel can slide between them. */}
       <Route
         path="/login"
-        element={waiting ? null : user ? <Navigate to={from ?? '/'} replace /> : <LoginPage {...authPageProps('login')} />}
+        element={
+          waiting ? null : user ? (
+            <Navigate to={from ?? '/'} replace />
+          ) : (
+            <AuthPage key="auth" {...authPageProps('login')} />
+          )
+        }
       />
       <Route
         path="/register"
-        element={waiting ? null : user ? <Navigate to={from ?? '/account'} replace /> : <RegisterPage {...authPageProps('register')} />}
+        element={
+          waiting ? null : user ? (
+            <Navigate to={from ?? '/account'} replace />
+          ) : (
+            <AuthPage key="auth" {...authPageProps('register')} />
+          )
+        }
       />
       <Route
         path="/account"
@@ -710,6 +722,17 @@ function AppContent() {
       <Route path="*" element={<NotFound lang={lang} />} />
     </Routes>
   );
+
+  // Login / Register is a full-screen page with its own background,
+  // so it is shown without the storefront header, sidebar and footer.
+  if (pathname === '/login' || pathname === '/register') {
+    return (
+      <>
+        <ScrollToTop />
+        {routes}
+      </>
+    );
+  }
 
   // The admin area has its own layout (sidebar + top bar), separate from the storefront.
   if (pathname.startsWith('/admin')) {
