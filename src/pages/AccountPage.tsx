@@ -1,7 +1,24 @@
+import { useState } from 'react';
+import { Camera, UserRound } from 'lucide-react';
 import { useAuthForm, type AuthPageProps } from '@/pages/useAuthForm';
 
 export function AccountPage(props: AuthPageProps) {
   const form = useAuthForm(props);
+  const [avatarError, setAvatarError] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const uploadAvatar = async (file: File | undefined) => {
+    if (!file) return;
+    setAvatarError('');
+    setUploadingAvatar(true);
+    try {
+      await props.onUploadProfileAvatar(file);
+    } catch (cause) {
+      setAvatarError(cause instanceof Error ? cause.message : 'We could not upload your profile photo.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   return (
     <section className="mx-auto mt-10 max-w-3xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-orange-100 sm:p-10">
@@ -15,6 +32,33 @@ export function AccountPage(props: AuthPageProps) {
         </div>
         <div className="rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-600">
           {props.profile?.role === 'admin' ? 'Admin account' : 'Customer account'}
+        </div>
+      </div>
+      <div className="mt-8 flex flex-wrap items-center gap-5">
+        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-orange-50 ring-4 ring-orange-100">
+          {props.profile?.avatar_url ? (
+            <img src={props.profile.avatar_url} alt="Your profile" className="h-full w-full object-cover" />
+          ) : (
+            <UserRound size={38} className="text-orange-400" aria-hidden="true" />
+          )}
+        </div>
+        <div>
+          <label className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border border-orange-200 px-4 py-2.5 text-sm font-bold text-orange-600 transition hover:bg-orange-50 ${uploadingAvatar ? 'pointer-events-none opacity-60' : ''}`}>
+            <Camera size={17} />
+            {uploadingAvatar ? 'Uploading…' : props.profile?.avatar_url ? 'Change photo' : 'Add profile photo'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              className="sr-only"
+              disabled={uploadingAvatar}
+              onChange={(event) => {
+                void uploadAvatar(event.target.files?.[0]);
+                event.currentTarget.value = '';
+              }}
+            />
+          </label>
+          <p className="mt-2 text-xs text-slate-500">JPG, PNG, WebP, or AVIF · up to 5 MB</p>
+          {avatarError && <p role="alert" className="mt-2 text-sm font-semibold text-red-600">{avatarError}</p>}
         </div>
       </div>
       <form onSubmit={(event) => void form.submit(event, 'account')} className="mt-8 grid gap-5 sm:grid-cols-2">

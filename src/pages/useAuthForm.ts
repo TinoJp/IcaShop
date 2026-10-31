@@ -13,6 +13,7 @@ export type AuthPageProps = {
   onRegister: (fullName: string, email: string, password: string, phone: string) => Promise<void>;
   onSignOut: () => Promise<void>;
   onUpdateProfile: (values: Pick<Profile, 'full_name' | 'phone' | 'address'>) => Promise<void>;
+  onUploadProfileAvatar: (file: File) => Promise<void>;
 };
 
 const PASSWORD_SYMBOLS = "!@#$%^&*()_+-=[]{};':\"\\|<>?,./`~";

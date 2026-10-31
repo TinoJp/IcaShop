@@ -262,7 +262,7 @@ export function OrderConfirmation({ order, whatsappUrl, onContinue }: { order: O
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">Order placed</p>
       <h1 className="mt-2 text-3xl font-black tracking-tight">Thank you for your order!</h1>
       <p className="mt-3 max-w-md text-sm text-slate-500">
-        Your order is saved. WhatsApp opens with the full order details ready. Tap Send in WhatsApp to deliver them to our team; pay with cash when your order arrives.
+        Thank you for shopping with iCa! Your order is pending while our team reviews it. We have also sent this update to your account notifications. WhatsApp opens with the full order details ready; tap Send to deliver them to our team.
       </p>
 
       <div className="mt-8 w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-sm ring-1 ring-orange-100 sm:p-8">

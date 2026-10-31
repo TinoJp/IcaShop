@@ -11,11 +11,13 @@ import {
 } from 'react-router-dom';
 import {
   ChevronDown,
+  Bell,
   Grid2X2,
   Heart,
   Home as HomeIcon,
   LayoutGrid,
   LogOut,
+  Package,
   Search,
   ShoppingBag,
   Store,
@@ -33,6 +35,7 @@ import { OrdersPage } from '@/pages/OrdersPage';
 import { AccountPage } from '@/pages/AccountPage';
 import { AccountDashboard } from '@/pages/AccountDashboard';
 import { AccountOverview } from '@/pages/AccountOverview';
+import { AccountNotificationsPage } from '@/pages/AccountNotificationsPage';
 import { SavedPage } from '@/pages/SavedPage';
 import { Footer } from '@/pages/Footer';
 import { AboutPage } from '@/pages/AboutPage';
@@ -169,6 +172,46 @@ function AppContent() {
   const location = useLocation();
   const pathname = location.pathname;
 
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const refreshUnreadNotifications = async () => {
+      if (!user) {
+        setUnreadNotificationCount(0);
+        return;
+      }
+
+      const { count, error: countError } = await supabase
+        .from('customer_notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+
+      if (!active) return;
+      if (countError) {
+        console.error('Could not load unread notification count:', countError);
+        return;
+      }
+      setUnreadNotificationCount(count ?? 0);
+    };
+
+    void refreshUnreadNotifications();
+    window.addEventListener('focus', refreshUnreadNotifications);
+    window.addEventListener('ica:notifications-changed', refreshUnreadNotifications);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void refreshUnreadNotifications();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      active = false;
+      window.removeEventListener('focus', refreshUnreadNotifications);
+      window.removeEventListener('ica:notifications-changed', refreshUnreadNotifications);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, pathname]);
+
   // Where to go after signing in (set when a page redirects the visitor to /login)
   const from = (location.state as { from?: string } | null)?.from;
 
@@ -225,7 +268,7 @@ function AppContent() {
       const [profileResult, savedResult] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, full_name, phone, address, role')
+          .select('id, full_name, phone, address, avatar_url, role')
           .eq('id', currentUser.id)
           .maybeSingle(),
         supabase.from('saved_products').select('product_id').eq('user_id', currentUser.id),
@@ -287,10 +330,52 @@ function AppContent() {
       .from('profiles')
       .update(values)
       .eq('id', user.id)
-      .select('id, full_name, phone, address, role')
+      .select('id, full_name, phone, address, avatar_url, role')
       .maybeSingle();
     if (updateError || !data) throw new Error('We could not save your profile. Please try again.');
     setProfile(data);
+  };
+
+  const uploadProfileAvatar = async (file: File) => {
+    if (!user) throw new Error('Please sign in before uploading a profile photo.');
+    const allowedTypes: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/avif': 'avif',
+    };
+    const extension = allowedTypes[file.type];
+    if (!extension) throw new Error('Choose a JPG, PNG, WebP, or AVIF image.');
+    if (file.size > 5 * 1024 * 1024) throw new Error('Choose an image smaller than 5 MB.');
+
+    const storage = supabase.storage.from('ica-profile-images');
+    const storagePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await storage.upload(storagePath, file, {
+      cacheControl: '3600',
+      contentType: file.type,
+      upsert: false,
+    });
+    if (uploadError) throw new Error(`We could not upload your profile photo: ${uploadError.message}`);
+
+    const avatarUrl = storage.getPublicUrl(storagePath).data.publicUrl;
+    const { data, error: updateError } = await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', user.id)
+      .select('id, full_name, phone, address, avatar_url, role')
+      .maybeSingle();
+    if (updateError || !data) {
+      const { error: cleanupError } = await storage.remove([storagePath]);
+      if (cleanupError) console.error('Could not remove the unlinked profile photo:', cleanupError);
+      throw new Error(updateError?.message ?? 'We could not save your profile photo. Please try again.');
+    }
+
+    const previousPath = profile?.avatar_url?.split('/storage/v1/object/public/ica-profile-images/')[1];
+    setProfile(data);
+    if (previousPath) {
+      const { error: removeError } = await storage.remove([decodeURIComponent(previousPath)]);
+      if (removeError) throw new Error(`Your new photo was saved, but the previous photo could not be removed: ${removeError.message}`);
+    }
   };
 
   const filteredProducts = useMemo(() => {
@@ -384,6 +469,7 @@ function AppContent() {
     onRegister: register,
     onSignOut: signOut,
     onUpdateProfile: updateProfile,
+    onUploadProfileAvatar: uploadProfileAvatar,
   });
 
   const showSidebar =
@@ -519,12 +605,13 @@ function AppContent() {
           waiting ? null : !user ? (
             <Navigate to="/login" state={{ from: pathname }} replace />
           ) : (
-            <AccountDashboard savedCount={savedItems.length} isAdmin={profile?.role === 'admin'} />
+            <AccountDashboard />
           )
         }
       >
         <Route index element={<AccountOverview profile={profile} savedCount={savedItems.length} />} />
         <Route path="orders" element={<OrdersPage />} />
+        <Route path="notifications" element={<AccountNotificationsPage />} />
         <Route
           path="saved"
           element={<SavedPage products={savedItems} loading={loading} onSave={toggleSaved} onAdd={cart.add} onOpen={openProduct} />}
@@ -646,13 +733,25 @@ function AppContent() {
           />
           <div className="absolute bottom-24 left-4 right-4 max-h-[70vh] overflow-y-auto rounded-2xl border border-orange-100 bg-white p-3 shadow-xl">
             <nav className="flex flex-col gap-1 text-sm font-semibold">
-              <button onClick={() => { openOrders(); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">{t('myOrders')}</button>
+              {user ? (
+                <>
+                  <button onClick={() => { navigate('/account'); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">Overview</button>
+                  <button onClick={() => { openOrders(); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">{t('myOrders')}</button>
+                  <button onClick={() => { navigate('/account/saved'); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">Saved</button>
+                  <button onClick={() => { navigate('/account/notifications'); setMenuOpen(false); }} className="flex items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-orange-50">
+                    Notifications
+                    {unreadNotificationCount > 0 && <span className="ml-3 rounded-full bg-orange-500 px-2 py-0.5 text-xs font-bold text-white">{unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}</span>}
+                  </button>
+                  <button onClick={() => { navigate('/account/profile'); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">Profile</button>
+                </>
+              ) : (
+                <button onClick={() => { openAccountOrLogin(); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">
+                  {t('signIn')}
+                </button>
+              )}
               {profile?.role === 'admin' && (
                 <button onClick={() => { openAdmin(); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left font-bold text-orange-600 hover:bg-orange-50">{t('adminDashboard')}</button>
               )}
-              <button onClick={() => { openAccountOrLogin(); setMenuOpen(false); }} className="rounded-lg px-3 py-2 text-left hover:bg-orange-50">
-                {user ? t('myAccount') : t('signIn')}
-              </button>
               {user && (
                 <button
                   onClick={() => { void signOut(); setMenuOpen(false); }}
@@ -693,17 +792,39 @@ function AppContent() {
                   <button onClick={openListing} className={`flex w-full items-center gap-3 rounded-xl border-l-2 px-3 py-3 ${pathname.startsWith('/products') ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-transparent text-slate-600 hover:bg-orange-50'}`}>
                     <Grid2X2 size={17} /> {t('products')}
                   </button>
-                  <button onClick={openOrders} className={`flex w-full items-center gap-3 rounded-xl border-l-2 px-3 py-3 ${pathname === '/account/orders' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-transparent text-slate-600 hover:bg-orange-50'}`}>
-                    <ShoppingBag size={17} /> {t('myOrders')}
-                  </button>
+                  {user ? (
+                    <>
+                      <Link to="/account" className={`flex items-center gap-3 rounded-xl border-l-2 px-3 py-3 ${pathname === '/account' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-transparent text-slate-600 hover:bg-orange-50'}`}>
+                        <LayoutGrid size={17} /> Overview
+                      </Link>
+                      <Link to="/account/orders" className={`flex items-center gap-3 rounded-xl border-l-2 px-3 py-3 ${pathname === '/account/orders' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-transparent text-slate-600 hover:bg-orange-50'}`}>
+                        <Package size={17} /> {t('myOrders')}
+                      </Link>
+                      <Link to="/account/saved" className={`flex items-center gap-3 rounded-xl border-l-2 px-3 py-3 ${pathname === '/account/saved' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-transparent text-slate-600 hover:bg-orange-50'}`}>
+                        <Heart size={17} /> Saved
+                      </Link>
+                      <Link to="/account/notifications" className={`flex items-center gap-3 rounded-xl border-l-2 px-3 py-3 ${pathname === '/account/notifications' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-transparent text-slate-600 hover:bg-orange-50'}`}>
+                        <Bell size={17} /> <span className="flex-1">Notifications</span>
+                        {unreadNotificationCount > 0 && (
+                          <span className="min-w-5 rounded-full bg-orange-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-4 text-white">
+                            {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                          </span>
+                        )}
+                      </Link>
+                      <Link to="/account/profile" className={`flex items-center gap-3 rounded-xl border-l-2 px-3 py-3 ${pathname === '/account/profile' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-transparent text-slate-600 hover:bg-orange-50'}`}>
+                        <UserRound size={17} /> Profile
+                      </Link>
+                    </>
+                  ) : (
+                    <button onClick={openAccountOrLogin} className={`flex w-full items-center gap-3 rounded-xl border-l-2 px-3 py-3 ${pathname.startsWith('/account') ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-transparent text-slate-600 hover:bg-orange-50'}`}>
+                      <UserRound size={17} /> {t('signIn')}
+                    </button>
+                  )}
                   {profile?.role === 'admin' && (
                     <button onClick={openAdmin} className="flex w-full items-center gap-3 rounded-xl border-l-2 border-transparent px-3 py-3 text-slate-600 hover:bg-orange-50">
                       <LayoutGrid size={17} /> {t('admin')}
                     </button>
                   )}
-                  <button onClick={openAccountOrLogin} className={`flex w-full items-center gap-3 rounded-xl border-l-2 px-3 py-3 ${pathname.startsWith('/account') && pathname !== '/account/orders' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-transparent text-slate-600 hover:bg-orange-50'}`}>
-                    <UserRound size={17} /> {user ? t('myAccount') : t('signIn')}
-                  </button>
                 </nav>
 
                 {user && (
