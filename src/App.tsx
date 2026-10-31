@@ -173,28 +173,42 @@ function AppContent() {
   const pathname = location.pathname;
 
   useEffect(() => {
-    const productSlug = pathname.match(/^\/products\/([^/]+)$/)?.[1];
+    const routePath = pathname.replace(/\/+$/, '') || '/';
+    const productSlug = routePath.match(/^\/products\/([^/]+)$/)?.[1];
     const product = productSlug ? products.find((item) => item.slug === productSlug) : undefined;
-    const privateRoute = /^\/(account|admin|checkout|login|register|order-confirmation)(\/|$)/.test(pathname);
-    const publicRoute = pathname === '/' || pathname === '/products' || pathname === '/about' || Boolean(productSlug);
+    const privateRoute = /^\/(account|admin|checkout|login|register|order-confirmation)(\/|$)/.test(routePath);
+    const publicRoute = routePath === '/' || routePath === '/products' || routePath === '/about' || Boolean(productSlug);
+    const routeTitles: Record<string, string> = {
+      '/': 'iCa Shop | Great Finds, Delivered Across Tanzania',
+      '/products': 'Shop Products Online in Tanzania | iCa Shop',
+      '/about': 'About iCa Shop | Online Shopping in Tanzania',
+      '/login': 'Sign In | iCa Shop',
+      '/register': 'Create Account | iCa Shop',
+      '/checkout': 'Checkout | iCa Shop',
+      '/order-confirmation': 'Order Confirmation | iCa Shop',
+      '/account': 'My Account | iCa Shop',
+      '/account/orders': 'My Orders | iCa Shop',
+      '/account/notifications': 'Notifications | iCa Shop',
+      '/account/saved': 'Saved Products | iCa Shop',
+      '/account/profile': 'My Profile | iCa Shop',
+      '/admin': 'Admin Dashboard | iCa Shop',
+      '/admin/orders': 'Admin Orders | iCa Shop',
+      '/admin/products': 'Admin Products | iCa Shop',
+      '/admin/categories': 'Admin Categories | iCa Shop',
+      '/admin/customers': 'Admin Customers | iCa Shop',
+      '/admin/reports': 'Admin Reports | iCa Shop',
+      '/admin/settings': 'Admin Settings | iCa Shop',
+      '/admin/team': 'Admin Access | iCa Shop',
+      '/admin/activity': 'Activity Log | iCa Shop',
+    };
     const title = product
       ? `${product.name} | iCa Shop Tanzania`
-      : pathname === '/products'
-        ? 'Shop Products Online in Tanzania | iCa Shop'
-        : pathname === '/about'
-          ? 'About iCa Shop | Online Shopping in Tanzania'
-          : pathname === '/login'
-            ? 'Sign In | iCa Shop'
-            : pathname === '/register'
-              ? 'Create Account | iCa Shop'
-                : pathname === '/'
-                  ? 'iCa Shop | Great Finds, Delivered Across Tanzania'
-                  : 'Page Not Found | iCa Shop';
+      : routeTitles[routePath] ?? 'Page Not Found | iCa Shop';
     const description = product
       ? `${product.description.slice(0, 145)}${product.description.length > 145 ? '…' : ''} Shop ${product.name} at iCa Shop with delivery across Tanzania.`
-      : pathname === '/products'
+      : routePath === '/products'
         ? 'Explore fashion, electronics, home essentials and more at iCa Shop. Find great products with delivery across Tanzania and Cash on Delivery.'
-        : pathname === '/about'
+        : routePath === '/about'
           ? 'Learn about iCa Shop, your online store for fashion, electronics, home essentials and delivery across Tanzania.'
           : 'Shop fashion, electronics, home essentials and more at iCa Shop. Discover great finds with convenient delivery across Tanzania and Cash on Delivery.';
     const canonicalUrl = `${siteConfig.url}${pathname === '/' ? '/' : pathname}`;
