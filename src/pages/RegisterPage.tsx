@@ -1,6 +1,5 @@
 import {
   AuthLayout,
-  AuthTabs,
   EmailField,
   PasswordField,
   SubmitButton,
@@ -12,9 +11,10 @@ export function RegisterPage(props: AuthPageProps) {
 
   return (
     <AuthLayout>
-      <AuthTabs mode="register" onModeChange={props.onModeChange} />
-      <h2 className="text-2xl font-black">Create your account</h2>
-      <p className="mt-2 text-sm text-slate-500">It only takes a minute to get started.</p>
+      <div className="text-center">
+        <h2 className="text-3xl font-black tracking-tight text-slate-900">Create your account</h2>
+        <p className="mt-2 text-sm text-slate-500">It only takes a minute to get started.</p>
+      </div>
       <form onSubmit={(event) => void form.submit(event, 'register')} className="mt-7 space-y-5">
         <label className="block text-sm font-bold">
           Full name
@@ -43,6 +43,16 @@ export function RegisterPage(props: AuthPageProps) {
         <SubmitButton submitting={form.submitting} label="Create account" />
         {form.formError && <p className="text-sm font-semibold text-red-600">{form.formError}</p>}
       </form>
+      <p className="mt-6 text-center text-sm text-slate-500">
+        Already have an account?{' '}
+        <button
+          type="button"
+          onClick={() => props.onModeChange('login')}
+          className="font-bold text-orange-600 hover:text-orange-700"
+        >
+          Sign in
+        </button>
+      </p>
     </AuthLayout>
   );
 }

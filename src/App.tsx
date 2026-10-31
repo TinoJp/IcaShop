@@ -717,9 +717,28 @@ function AppContent() {
           </button>
           <button
             onClick={openAccountOrLogin}
-            className="hidden items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600 sm:flex"
+            aria-label={user ? `Open ${profile?.full_name || 'user'} account` : t('signIn')}
+            className="flex items-center gap-2 rounded-xl bg-orange-50 px-2.5 py-2 text-sm font-bold text-slate-700 ring-1 ring-orange-100 transition hover:bg-orange-100 sm:px-3"
           >
-            <UserRound size={17} /> {user ? profile?.full_name || t('myAccount') : t('signIn')}
+            {user ? (
+              <>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-orange-200">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <UserRound size={17} className="text-orange-500" aria-hidden="true" />
+                  )}
+                </span>
+                <span className="hidden max-w-36 text-left md:block">
+                  <span className="block truncate leading-tight">{profile?.full_name || user.email}</span>
+                  <span className="block text-[11px] font-medium text-slate-500">{profile?.role === 'admin' ? 'Administrator' : 'Customer'}</span>
+                </span>
+              </>
+            ) : (
+              <>
+                <UserRound size={17} className="text-orange-600" /> <span>{t('signIn')}</span>
+              </>
+            )}
           </button>
         </div>
       </header>
