@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /admin
+Disallow: /checkout
+Disallow: /login
+Disallow: /register
+Disallow: /order-confirmation
+
+Sitemap: https://www.icashop.co.tz/sitemap.xml

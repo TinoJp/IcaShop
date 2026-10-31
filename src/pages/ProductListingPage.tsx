@@ -44,9 +44,9 @@ export function ProductListingPage({
             <ArrowLeft size={16} /> Back to all products
           </button>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">Product catalogue</p>
-          <h2 className="mt-1 text-3xl font-black tracking-tight">
+          <h1 className="mt-1 text-3xl font-black tracking-tight">
             {searchTerm ? `Results for "${searchTerm}"` : 'Explore products'}
-          </h2>
+          </h1>
           <p className="mt-2 text-sm text-slate-500">{products.length} products available for delivery.</p>
         </div>
         <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">

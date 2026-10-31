@@ -44,7 +44,7 @@ export function ProductDetailPage({ product, onBack, onAdd, saved, onSave }: Pro
               <Heart size={20} fill={saved ? 'currentColor' : 'none'} />
             </button>
           </div>
-          <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">{product.name}</h2>
+          <h1 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">{product.name}</h1>
           <p className="mt-4 leading-7 text-slate-600">{product.description}</p>
           <div className="mt-7 flex items-baseline gap-3">
             <span className="text-2xl font-black">{formatTsh(currentPrice)}</span>

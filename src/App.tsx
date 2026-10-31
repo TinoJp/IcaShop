@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { siteConfig } from '@/siteConfig';
 import { useCart } from '@/cart';
 import { normalizeTanzanianPhone, isTanzanianPhone } from '@/utils';
 import { LanguageProvider, useLanguage, type Lang } from '@/i18n';
@@ -171,6 +172,92 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
+
+  useEffect(() => {
+    const productSlug = pathname.match(/^\/products\/([^/]+)$/)?.[1];
+    const product = productSlug ? products.find((item) => item.slug === productSlug) : undefined;
+    const privateRoute = /^\/(account|admin|checkout|login|register|order-confirmation)(\/|$)/.test(pathname);
+    const publicRoute = pathname === '/' || pathname === '/products' || pathname === '/about' || Boolean(productSlug);
+    const title = product
+      ? `${product.name} | iCa Shop Tanzania`
+      : pathname === '/products'
+        ? 'Shop Products Online in Tanzania | iCa Shop'
+        : pathname === '/about'
+          ? 'About iCa Shop | Online Shopping in Tanzania'
+          : pathname === '/'
+            ? 'iCa Shop | Great Finds, Delivered Across Tanzania'
+            : 'Page Not Found | iCa Shop';
+    const description = product
+      ? `${product.description.slice(0, 145)}${product.description.length > 145 ? '…' : ''} Shop ${product.name} at iCa Shop with delivery across Tanzania.`
+      : pathname === '/products'
+        ? 'Explore fashion, electronics, home essentials and more at iCa Shop. Find great products with delivery across Tanzania and Cash on Delivery.'
+        : pathname === '/about'
+          ? 'Learn about iCa Shop, your online store for fashion, electronics, home essentials and delivery across Tanzania.'
+          : 'Shop fashion, electronics, home essentials and more at iCa Shop. Discover great finds with convenient delivery across Tanzania and Cash on Delivery.';
+    const canonicalUrl = `${siteConfig.url}${pathname === '/' ? '/' : pathname}`;
+    const imageUrl = product?.image_url || `${siteConfig.url}/logo.jpeg`;
+    const robots = privateRoute || !publicRoute || (productSlug && !product) ? 'noindex, nofollow' : 'index, follow';
+
+    document.title = title;
+    document.documentElement.lang = lang === 'sw' ? 'sw-TZ' : 'en-TZ';
+
+    const setMeta = (selector: string, attribute: 'name' | 'property', key: string, content: string) => {
+      let tag = document.head.querySelector<HTMLMetaElement>(selector);
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute(attribute, key);
+        document.head.appendChild(tag);
+      }
+      tag.content = content;
+    };
+
+    setMeta('meta[name="description"]', 'name', 'description', description);
+    setMeta('meta[name="robots"]', 'name', 'robots', robots);
+    setMeta('meta[property="og:title"]', 'property', 'og:title', title);
+    setMeta('meta[property="og:description"]', 'property', 'og:description', description);
+    setMeta('meta[property="og:url"]', 'property', 'og:url', canonicalUrl);
+    setMeta('meta[property="og:image"]', 'property', 'og:image', imageUrl);
+    setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title);
+    setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description);
+    setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', imageUrl);
+
+    let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = canonicalUrl;
+
+    let productStructuredData = document.head.querySelector<HTMLScriptElement>('#product-structured-data');
+    if (product && !privateRoute) {
+      if (!productStructuredData) {
+        productStructuredData = document.createElement('script');
+        productStructuredData.id = 'product-structured-data';
+        productStructuredData.type = 'application/ld+json';
+        document.head.appendChild(productStructuredData);
+      }
+      productStructuredData.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.name,
+        description: product.description,
+        image: product.image_url ? [product.image_url] : undefined,
+        sku: product.id,
+        brand: { '@type': 'Brand', name: 'iCa Shop' },
+        offers: {
+          '@type': 'Offer',
+          url: canonicalUrl,
+          priceCurrency: 'TZS',
+          price: product.sale_price ?? product.price,
+          availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+          itemCondition: 'https://schema.org/NewCondition',
+        },
+      });
+    } else {
+      productStructuredData?.remove();
+    }
+  }, [lang, pathname, products]);
 
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 

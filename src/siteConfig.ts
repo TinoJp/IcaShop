@@ -3,6 +3,7 @@
 // Fill these in with the real details of the shop.
 
 export type SiteConfig = {
+  url: string;
   whatsapp: string;
   phone: string;
   email: string;
@@ -15,6 +16,7 @@ export type SiteConfig = {
 };
 
 export const siteConfig: SiteConfig = {
+  url: 'https://www.icashop.co.tz',
   // Country code first, digits only, e.g. '255712345678'
   whatsapp: '+255684312982',
   // How the number should look on screen, e.g. '+255 712 345 678'
