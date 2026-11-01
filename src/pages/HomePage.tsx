@@ -8,6 +8,7 @@ import {
   Sparkles,
   Trophy,
 } from 'lucide-react';
+import { HeroCarousel } from '@/components/HeroCarousel';
 import { ProductCard } from '@/components/ProductCard';
 import { useLanguage } from '@/i18n';
 import type { Category, Product } from '@/types';
@@ -20,10 +21,6 @@ const categoryIcons: Record<string, typeof Laptop> = {
   sports: Trophy,
   'toys-games': Baby,
 };
-
-// Words shown under the hero button. Clicking one searches for it.
-// Change these to words that match products you actually sell.
-const popularSearches = ['Smartphones', 'Laptops', 'Shoes', 'Watches', 'Headphones'];
 
 type HomePageProps = {
   categories: Category[];
@@ -60,48 +57,12 @@ export function HomePage({
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-3xl bg-[#FEEFEA] shadow-sm ring-1 ring-orange-100">
-        <div className="grid items-center md:grid-cols-[1fr_1.05fr]">
-          <div className="relative z-10 px-6 pb-2 pt-10 sm:px-12 sm:pt-14 md:pb-14">
-            <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-              {t('heroTitleA')}
-              <br />
-              <span className="text-orange-500">{t('heroTitleB')}</span>
-            </h1>
-            <p className="mt-5 max-w-md text-sm leading-6 text-slate-600 sm:text-base">{t('heroDesc')}</p>
-            <button
-              onClick={onExplore}
-              className="mt-7 inline-flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 transition hover:-translate-y-0.5 hover:bg-orange-600"
-            >
-              {t('shopNow')} <ArrowRight size={17} />
-            </button>
-
-            {onSearch && popularSearches.length > 0 && (
-              <div className="mt-8 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-slate-800">{t('popularSearches')}:</span>
-                {popularSearches.map((term) => (
-                  <button
-                    key={term}
-                    onClick={() => onSearch(term)}
-                    className="rounded-full border border-orange-100 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-orange-400 hover:text-orange-600"
-                  >
-                    {term}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <img
-            src="/hero-products.webp"
-            alt=""
-            width={1247}
-            height={864}
-            fetchPriority="high"
-            className="h-auto w-full [-webkit-mask-image:linear-gradient(to_right,transparent_4.5%,black_9%)] [mask-image:linear-gradient(to_right,transparent_4.5%,black_9%)]"
-          />
-        </div>
-      </section>
+      <HeroCarousel
+        categories={categories}
+        onCategory={onCategory}
+        onExplore={onExplore}
+        onSearch={onSearch}
+      />
 
       <section id="categories" className="mt-10">
         <div className="mb-4 flex items-end justify-between">
