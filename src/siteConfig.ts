@@ -26,7 +26,7 @@ export const siteConfig: SiteConfig = {
   location: 'Mikocheni, Dar es Salaam, Tanzania',
   social: {
     // Full links, e.g. 'https://instagram.com/yourshop'
-    instagram: 'https://www.instagram.com/abby_ica?mdxt=MTJ2eGd2Yzl5eXo3dw==',
+    instagram: 'https://www.instagram.com/ica_0nline_shop?cplk=MXN3cnFwNXZvcnQ5cQ%3D%3D&utm_source=qr',
     facebook: '',
     tiktok: '',
   },
