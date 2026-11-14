@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { deleteImage, uploadImage } from '@/lib/imageStorage';
 import { siteConfig } from '@/siteConfig';
 import { useCart } from '@/cart';
 import { normalizeTanzanianPhone, isTanzanianPhone } from '@/utils';
@@ -452,16 +453,7 @@ function AppContent() {
     if (!extension) throw new Error('Choose a JPG, PNG, WebP, or AVIF image.');
     if (file.size > 5 * 1024 * 1024) throw new Error('Choose an image smaller than 5 MB.');
 
-    const storage = supabase.storage.from('ica-profile-images');
-    const storagePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
-    const { error: uploadError } = await storage.upload(storagePath, file, {
-      cacheControl: '3600',
-      contentType: file.type,
-      upsert: false,
-    });
-    if (uploadError) throw new Error(`We could not upload your profile photo: ${uploadError.message}`);
-
-    const avatarUrl = storage.getPublicUrl(storagePath).data.publicUrl;
+    const avatarUrl = await uploadImage(file, 'avatar', user.id);
     const { data, error: updateError } = await supabase
       .from('profiles')
       .update({ avatar_url: avatarUrl })
@@ -469,16 +461,21 @@ function AppContent() {
       .select('id, full_name, phone, address, avatar_url, role')
       .maybeSingle();
     if (updateError || !data) {
-      const { error: cleanupError } = await storage.remove([storagePath]);
-      if (cleanupError) console.error('Could not remove the unlinked profile photo:', cleanupError);
+      try {
+        await deleteImage('avatar', avatarUrl);
+      } catch (cleanupError) {
+        console.error('Could not remove the unlinked profile photo:', cleanupError);
+      }
       throw new Error(updateError?.message ?? 'We could not save your profile photo. Please try again.');
     }
 
-    const previousPath = profile?.avatar_url?.split('/storage/v1/object/public/ica-profile-images/')[1];
     setProfile(data);
-    if (previousPath) {
-      const { error: removeError } = await storage.remove([decodeURIComponent(previousPath)]);
-      if (removeError) throw new Error(`Your new photo was saved, but the previous photo could not be removed: ${removeError.message}`);
+    if (profile?.avatar_url && profile.avatar_url !== avatarUrl) {
+      try {
+        await deleteImage('avatar', profile.avatar_url);
+      } catch (removeError) {
+        throw new Error(`Your new photo was saved, but the previous photo could not be removed: ${removeError instanceof Error ? removeError.message : 'unknown error'}`);
+      }
     }
   };
 

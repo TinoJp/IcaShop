@@ -1,0 +1,12 @@
+name = "ica-image-storage"
+main = "worker.ts"
+compatibility_date = "2026-11-14"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "ica-shop"
+
+[vars]
+SUPABASE_URL = "https://ervxpgsgxlqapdhrjucq.supabase.co"
+PUBLIC_IMAGE_BASE_URL = "https://pub-80005bf6e3a549f2a07e88a7cb7b48fa.r2.dev"
+ALLOWED_ORIGINS = "https://www.icashop.co.tz,https://icashop.co.tz,http://localhost:5173"

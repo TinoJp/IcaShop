@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, Check, ImagePlus, Loader2, Package, Plus, Search, Trash2, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { deleteImage, uploadImage } from '@/lib/imageStorage';
 import { formatTsh } from '@/utils';
 import type { Category, ProductAdmin } from '@/types';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -20,17 +21,6 @@ const emptyForm = {
   is_active: true,
   is_archived: false,
   image_url: '',
-};
-
-const storedImagePath = (imageUrl: string) => {
-  try {
-    const marker = '/ica-product-images/';
-    const pathname = new URL(imageUrl).pathname;
-    const index = pathname.indexOf(marker);
-    return index < 0 ? null : decodeURIComponent(pathname.slice(index + marker.length));
-  } catch {
-    return null;
-  }
 };
 
 export function AdminProducts({ onBack }: AdminProductsProps) {
@@ -193,26 +183,35 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
       }
 
       if (imageFile && productId) {
-        const safeName = imageFile.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '-');
-        const storagePath = `${productId}/${Date.now()}-${safeName}`;
-        const { error: uploadError } = await supabase.storage.from('ica-product-images').upload(storagePath, imageFile, { cacheControl: '3600', upsert: false });
-        if (uploadError) throw uploadError;
-
-        const imageUrl = supabase.storage.from('ica-product-images').getPublicUrl(storagePath).data.publicUrl;
+        const imageUrl = await uploadImage(imageFile, 'product', productId);
         const { data: existingImage, error: lookupError } = await supabase.from('product_images').select('id,image_url').eq('product_id', productId).order('display_order').limit(1).maybeSingle();
         if (lookupError) {
-          await supabase.storage.from('ica-product-images').remove([storagePath]);
+          try {
+            await deleteImage('product', imageUrl);
+          } catch (cleanupError) {
+            console.error('Could not remove the unlinked product image:', cleanupError);
+          }
           throw lookupError;
         }
         const imageWrite = existingImage
           ? await supabase.from('product_images').update({ image_url: imageUrl, alt_text: editing.name.trim(), display_order: 0 }).eq('id', existingImage.id)
           : await supabase.from('product_images').insert({ product_id: productId, image_url: imageUrl, alt_text: editing.name.trim(), display_order: 0 });
         if (imageWrite.error) {
-          await supabase.storage.from('ica-product-images').remove([storagePath]);
+          try {
+            await deleteImage('product', imageUrl);
+          } catch (cleanupError) {
+            console.error('Could not remove the unlinked product image:', cleanupError);
+          }
           throw imageWrite.error;
         }
-        const previousPath = existingImage?.image_url ? storedImagePath(existingImage.image_url) : null;
-        if (previousPath && previousPath !== storagePath) await supabase.storage.from('ica-product-images').remove([previousPath]);
+        if (existingImage?.image_url && existingImage.image_url !== imageUrl) {
+          try {
+            await deleteImage('product', existingImage.image_url);
+          } catch (cleanupError) {
+            console.error('Could not remove the replaced product image:', cleanupError);
+            setError('Product saved, but the previous image could not be removed from Cloudflare.');
+          }
+        }
       }
       setEditing(null);
       setImageFile(null);
@@ -226,11 +225,28 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
 
   const handleDelete = async (product: ProductAdmin) => {
     setDeleting(true);
+    const { data: images, error: imageLookupError } = await supabase
+      .from('product_images')
+      .select('image_url')
+      .eq('product_id', product.id);
+    if (imageLookupError) {
+      setError('Could not load this product’s images, so the product was not deleted.');
+      setDeleting(false);
+      return;
+    }
+
     const { error: deleteError } = await supabase.from('products').delete().eq('id', product.id);
     if (deleteError) {
       setError('Could not delete that product.');
     } else {
       setDeleteTarget(null);
+      const cleanupResults = await Promise.allSettled(
+        (images ?? []).map(({ image_url }) => deleteImage('product', image_url)),
+      );
+      if (cleanupResults.some((result) => result.status === 'rejected')) {
+        console.error('Could not remove every image for the deleted product:', cleanupResults);
+        setError('Product deleted, but one or more images could not be removed from Cloudflare.');
+      }
       void load();
     }
     setDeleting(false);
