@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { CartItem, Product } from '@/types';
+import type { CartItem, Product, ProductVariant } from '@/types';
 
 const STORAGE_KEY = 'ica-cart';
 
@@ -21,6 +21,20 @@ function loadCart(): CartItem[] {
   }
 }
 
+function getItemKey(product: Product, variant?: ProductVariant | null) {
+  return `${product.id}:${variant?.id ?? 'base'}`;
+}
+
+function getItemPrice(product: Product, variant?: ProductVariant | null) {
+  if (variant?.variant_price !== undefined && variant?.variant_price !== null) return variant.variant_price;
+  return product.sale_price ?? product.price;
+}
+
+function getItemStock(product: Product, variant?: ProductVariant | null) {
+  if (variant && typeof variant.variant_stock === 'number') return variant.variant_stock;
+  return product.stock;
+}
+
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>(loadCart);
 
@@ -32,42 +46,49 @@ export function useCart() {
     }
   }, [items]);
 
-  const add = (product: Product, quantity = 1) => {
+  const add = (product: Product, quantity = 1, variant?: ProductVariant | null) => {
     setItems((current) => {
-      const existing = current.find((item) => item.product.id === product.id);
+      const key = getItemKey(product, variant);
+      const existing = current.find((item) => getItemKey(item.product, item.variant) === key);
+      const maxQty = getItemStock(product, variant);
+
       if (existing) {
-        const maxQty = product.stock;
         return current.map((item) =>
-          item.product.id === product.id
+          getItemKey(item.product, item.variant) === key
             ? { ...item, quantity: Math.min(maxQty, item.quantity + quantity) }
             : item
         );
       }
-      return [...current, { product, quantity: Math.min(product.stock, quantity) }];
+
+      return [...current, { product, quantity: Math.min(maxQty, quantity), variant: variant ?? null }];
     });
   };
 
-  const setQuantity = (productId: string, quantity: number) => {
+  const setQuantity = (productId: string, quantity: number, variant?: ProductVariant | null) => {
+    const key = variant ? `${productId}:${variant.id}` : `${productId}:base`;
+
     setItems((current) =>
       current
-        .map((item) =>
-          item.product.id === productId
-            ? { ...item, quantity: Math.min(item.product.stock, Math.max(0, quantity)) }
-            : item
-        )
+        .map((item) => {
+          const itemKey = getItemKey(item.product, item.variant);
+          if (itemKey !== key) return item;
+          const maxQty = getItemStock(item.product, item.variant);
+          return { ...item, quantity: Math.min(maxQty, Math.max(0, quantity)) };
+        })
         .filter((item) => item.quantity > 0)
     );
   };
 
-  const remove = (productId: string) => {
-    setItems((current) => current.filter((item) => item.product.id !== productId));
+  const remove = (productId: string, variant?: ProductVariant | null) => {
+    const key = variant ? `${productId}:${variant.id}` : `${productId}:base`;
+    setItems((current) => current.filter((item) => getItemKey(item.product, item.variant) !== key));
   };
 
   const clear = () => setItems([]);
 
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce(
-    (sum, item) => sum + (item.product.sale_price ?? item.product.price) * item.quantity,
+    (sum, item) => sum + getItemPrice(item.product, item.variant) * item.quantity,
     0
   );
 

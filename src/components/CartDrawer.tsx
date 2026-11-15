@@ -1,5 +1,5 @@
 import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
-import type { CartItem } from '@/types';
+import type { CartItem, ProductVariant } from '@/types';
 import { formatTsh } from '@/utils';
 
 type CartDrawerProps = {
@@ -7,8 +7,8 @@ type CartDrawerProps = {
   items: CartItem[];
   subtotal: number;
   onClose: () => void;
-  onQuantity: (productId: string, quantity: number) => void;
-  onRemove: (productId: string) => void;
+  onQuantity: (productId: string, quantity: number, variant?: ProductVariant | null) => void;
+  onRemove: (productId: string, variant?: ProductVariant | null) => void;
   onCheckout: () => void;
 };
 
@@ -51,19 +51,21 @@ export function CartDrawer({ open, items, subtotal, onClose, onQuantity, onRemov
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <ul className="space-y-4">
                 {items.map((item) => {
-                  const unitPrice = item.product.sale_price ?? item.product.price;
+                  const variantPrice = item.variant?.variant_price ?? item.product.sale_price ?? item.product.price;
+                  const stockLimit = item.variant?.variant_stock ?? item.product.stock;
                   return (
-                    <li key={item.product.id} className="flex gap-3 rounded-2xl bg-[#FAF7F4] p-3">
+                    <li key={`${item.product.id}:${item.variant?.id ?? 'base'}`} className="flex gap-3 rounded-2xl bg-[#FAF7F4] p-3">
                       <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-[#FFF1E6] text-orange-400">
-                        <ShoppingBag size={28} strokeWidth={1.2} />
+                        {item.variant?.image_url ? <img src={item.variant.image_url} alt={item.variant.alt_text} className="h-full w-full rounded-xl object-cover" /> : <ShoppingBag size={28} strokeWidth={1.2} />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-bold">{item.product.name}</p>
-                        <p className="mt-0.5 text-sm font-black text-orange-600">{formatTsh(unitPrice)}</p>
+                        {item.variant && <p className="text-[11px] font-semibold text-orange-600">{item.variant.variant_name}</p>}
+                        <p className="mt-0.5 text-sm font-black text-orange-600">{formatTsh(variantPrice)}</p>
                         <div className="mt-2 flex items-center gap-2">
                           <div className="flex items-center rounded-lg border border-orange-100 bg-white">
                             <button
-                              onClick={() => onQuantity(item.product.id, item.quantity - 1)}
+                              onClick={() => onQuantity(item.product.id, item.quantity - 1, item.variant ?? null)}
                               className="p-1.5 text-slate-500 hover:text-orange-600"
                               aria-label="Decrease quantity"
                             >
@@ -71,8 +73,8 @@ export function CartDrawer({ open, items, subtotal, onClose, onQuantity, onRemov
                             </button>
                             <span className="w-7 text-center text-sm font-bold">{item.quantity}</span>
                             <button
-                              onClick={() => onQuantity(item.product.id, item.quantity + 1)}
-                              disabled={item.quantity >= item.product.stock}
+                              onClick={() => onQuantity(item.product.id, item.quantity + 1, item.variant ?? null)}
+                              disabled={item.quantity >= stockLimit}
                               className="p-1.5 text-slate-500 hover:text-orange-600 disabled:opacity-30"
                               aria-label="Increase quantity"
                             >
@@ -80,7 +82,7 @@ export function CartDrawer({ open, items, subtotal, onClose, onQuantity, onRemov
                             </button>
                           </div>
                           <button
-                            onClick={() => onRemove(item.product.id)}
+                            onClick={() => onRemove(item.product.id, item.variant ?? null)}
                             className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
                             aria-label="Remove from cart"
                           >
@@ -89,7 +91,7 @@ export function CartDrawer({ open, items, subtotal, onClose, onQuantity, onRemov
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="text-sm font-black">{formatTsh(unitPrice * item.quantity)}</p>
+                        <p className="text-sm font-black">{formatTsh(variantPrice * item.quantity)}</p>
                       </div>
                     </li>
                   );

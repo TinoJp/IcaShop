@@ -46,7 +46,7 @@ import { AuthPage } from '@/pages/AuthPage';
 import { HomePage } from '@/pages/HomePage';
 import { ProductDetailPage } from '@/pages/ProductDetailPage';
 import { ProductListingPage } from '@/pages/ProductListingPage';
-import type { Category, Product, Profile, OrderRow } from '@/types';
+import type { Category, Product, ProductVariant, Profile, OrderRow } from '@/types';
 
 // The admin area is only downloaded when an admin opens /admin.
 const AdminRoutes = lazy(() =>
@@ -126,7 +126,7 @@ function ProductDetailRoute({
   lang: Lang;
   savedProducts: string[];
   onBack: () => void;
-  onAdd: (product: Product, quantity?: number) => void;
+  onAdd: (product: Product, quantity?: number, variant?: ProductVariant | null) => void;
   onSave: (productId: string) => void;
 }) {
   const { slug } = useParams();
@@ -139,7 +139,7 @@ function ProductDetailRoute({
     <ProductDetailPage
       product={product}
       onBack={onBack}
-      onAdd={(quantity) => onAdd(product, quantity)}
+      onAdd={(quantity, variant) => onAdd(product, quantity, variant)}
       saved={savedProducts.includes(product.id)}
       onSave={() => onSave(product.id)}
     />
@@ -331,18 +331,41 @@ function AppContent() {
           .eq('is_archived', false)
           .order('created_at', { ascending: false }),
         supabase.from('settings').select('setting_key, setting_value'),
-        supabase.from('product_images').select('product_id,image_url,display_order').order('display_order'),
+        supabase
+          .from('product_images')
+          .select('id, product_id, image_url, alt_text, display_order, variant_name, variant_price, variant_stock')
+          .order('display_order'),
       ]);
 
       if (categoriesResult.error || productsResult.error) {
         setError('We could not load the catalog right now. Please refresh and try again.');
       } else {
         setCategories(categoriesResult.data ?? []);
-        const images = new Map<string, string>();
+        const imagesByProduct = new Map<string, ProductVariant[]>();
         for (const image of imagesResult.data ?? []) {
-          if (!images.has(image.product_id)) images.set(image.product_id, image.image_url);
+          const variant = {
+            id: image.id,
+            product_id: image.product_id,
+            image_url: image.image_url,
+            alt_text: image.alt_text ?? image.variant_name ?? 'Product image',
+            display_order: image.display_order ?? 0,
+            variant_name: image.variant_name ?? 'Default option',
+            variant_price: image.variant_price ?? null,
+            variant_stock: image.variant_stock ?? 0,
+          } satisfies ProductVariant;
+          const list = imagesByProduct.get(image.product_id) ?? [];
+          list.push(variant);
+          imagesByProduct.set(image.product_id, list);
         }
-        setProducts((productsResult.data ?? []).map((product) => ({ ...product, image_url: images.get(product.id) ?? null })));
+        setProducts((productsResult.data ?? []).map((product) => {
+          const variants = imagesByProduct.get(product.id) ?? [];
+          const primaryImage = variants[0]?.image_url ?? null;
+          return {
+            ...product,
+            image_url: primaryImage,
+            variants: variants.length ? variants : undefined,
+          };
+        }));
       }
 
       if (!settingsResult.error && settingsResult.data) {
@@ -640,8 +663,8 @@ function AppContent() {
             lang={lang}
             savedProducts={savedProducts}
             onBack={openListing}
-            onAdd={(product, quantity) => {
-              cart.add(product, quantity);
+            onAdd={(product, quantity, variant) => {
+              cart.add(product, quantity, variant ?? null);
               setCartOpen(true);
             }}
             onSave={toggleSaved}

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Check, Download, MessageCircle, Search, ShieldCheck, Tag, Trash2, Truck, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { formatTsh } from '@/utils';
@@ -22,7 +22,7 @@ export function AdminCategories() {
   const [confirming, setConfirming] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const [categories, products] = await Promise.all([
       supabase.from('categories').select('id,name,slug,description,display_order').order('display_order'),
       supabase.from('products').select('category_id'),
@@ -35,8 +35,8 @@ export function AdminCategories() {
     const productCounts = new Map<string, number>();
     (products.data ?? []).forEach(product => productCounts.set(product.category_id, (productCounts.get(product.category_id) ?? 0) + 1));
     setCounts(Object.fromEntries(productCounts));
-  };
-  useEffect(() => { void load(); }, []);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
 
   const clearForm = () => { setEditing(null); setName(''); setDescription(''); };
   const save = async (event: FormEvent) => {
@@ -141,7 +141,7 @@ export function AdminActivity(){
  const [notice,setNotice]=useState('');
  const [confirming,setConfirming]=useState(false);
  const [clearing,setClearing]=useState(false);
- const load=async()=>{
+ const load=useCallback(async()=>{
    const {data,error:e}=await supabase.from('admin_audit_log').select('id,actor_id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(100);
    if(e){setError('Activity log could not be loaded. Apply the admin dashboard migration and check admin access.');return}
    const rows=(data??[]) as Entry[];
@@ -152,8 +152,8 @@ export function AdminActivity(){
    if(profileError){setError(`Activity log loaded, but admin names could not be loaded: ${profileError.message}`);return}
    setActorNames(Object.fromEntries((profiles??[]).map((profile)=>[profile.id,profile.full_name.trim().split(/\s+/)[0]||'Unknown admin'])));
    setError('');
- };
- useEffect(()=>{void load()},[]);
+ },[]);
+ useEffect(()=>{void load()},[load]);
  const clear=async()=>{setClearing(true);setError('');setNotice('');const {data,error:e}=await supabase.rpc('admin_clear_ica_activity_log');if(e)setError(`Could not clear activity log: ${e.message}`);else{setEntries([]);setActorNames({});setConfirming(false);setNotice(`Activity log cleared (${data ?? 0} entries).`)}setClearing(false)};
  return <section className={box}>
    {confirming&&<ConfirmDialog title="Clear activity log?" message="This permanently deletes all admin activity records. This cannot be undone." confirmLabel="Clear activity log" busyLabel="Clearing…" busy={clearing} onCancel={()=>setConfirming(false)} onConfirm={()=>void clear()}/>}

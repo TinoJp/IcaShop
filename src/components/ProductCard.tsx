@@ -1,12 +1,12 @@
 import { Heart, ShoppingBag, Shirt, Star, Watch } from 'lucide-react';
 import { formatTsh } from '@/utils';
-import type { Product } from '@/types';
+import type { Product, ProductVariant } from '@/types';
 
 type ProductCardProps = {
   product: Product;
   saved: boolean;
   onSave: () => void;
-  onAdd: (product: Product, quantity?: number) => void;
+  onAdd: (product: Product, quantity?: number, variant?: ProductVariant | null) => void;
   onOpen: () => void;
 };
 

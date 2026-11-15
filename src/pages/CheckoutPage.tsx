@@ -209,14 +209,15 @@ export function Checkout({ items, subtotal, profile, deliveryFee, freeDeliveryTh
           <h2 className="text-lg font-black">Order summary</h2>
           <ul className="mt-5 space-y-3">
             {items.map((item) => {
-              const unitPrice = item.product.sale_price ?? item.product.price;
+              const unitPrice = item.variant?.variant_price ?? item.product.sale_price ?? item.product.price;
               return (
-                <li key={item.product.id} className="flex items-center gap-3">
+                <li key={`${item.product.id}:${item.variant?.id ?? 'base'}`} className="flex items-center gap-3">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-50 to-[#FFF1E6] text-orange-400">
-                    <ShoppingBag size={20} strokeWidth={1.2} />
+                    {item.variant?.image_url ? <img src={item.variant.image_url} alt={item.variant.alt_text} className="h-full w-full rounded-lg object-cover" /> : <ShoppingBag size={20} strokeWidth={1.2} />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold">{item.product.name}</p>
+                    {item.variant && <p className="text-[11px] text-orange-600">{item.variant.variant_name}</p>}
                     <p className="text-xs text-slate-500">Qty {item.quantity} · {formatTsh(unitPrice)}</p>
                   </div>
                   <span className="shrink-0 text-sm font-black">{formatTsh(unitPrice * item.quantity)}</span>
