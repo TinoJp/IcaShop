@@ -119,6 +119,7 @@ function ProductDetailRoute({
   savedProducts,
   onBack,
   onAdd,
+  onOpen,
   onSave,
 }: {
   products: Product[];
@@ -127,6 +128,7 @@ function ProductDetailRoute({
   savedProducts: string[];
   onBack: () => void;
   onAdd: (product: Product, quantity?: number, variant?: ProductVariant | null) => void;
+  onOpen: (product: Product) => void;
   onSave: (productId: string) => void;
 }) {
   const { slug } = useParams();
@@ -134,14 +136,21 @@ function ProductDetailRoute({
 
   if (loading) return <div className="h-96 animate-pulse rounded-2xl bg-orange-100" />;
   if (!product) return <NotFound lang={lang} />;
+  const otherProducts = products.filter((item) => item.id !== product.id);
+  const sameCategoryProducts = otherProducts.filter((item) => item.category_id === product.category_id);
+  const relatedProducts = (sameCategoryProducts.length > 0 ? sameCategoryProducts : otherProducts).slice(0, 4);
 
   return (
     <ProductDetailPage
       product={product}
+      relatedProducts={relatedProducts}
+      savedProducts={savedProducts}
+      lang={lang}
       onBack={onBack}
-      onAdd={(quantity, variant) => onAdd(product, quantity, variant)}
+      onAdd={onAdd}
+      onOpen={onOpen}
       saved={savedProducts.includes(product.id)}
-      onSave={() => onSave(product.id)}
+      onSave={onSave}
     />
   );
 }
@@ -667,6 +676,7 @@ function AppContent() {
               cart.add(product, quantity, variant ?? null);
               setCartOpen(true);
             }}
+            onOpen={openProduct}
             onSave={toggleSaved}
           />
         }
