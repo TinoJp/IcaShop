@@ -114,18 +114,24 @@ function NotFound({ lang }: { lang: Lang }) {
 
 function ProductDetailRoute({
   products,
+  categories,
   loading,
   lang,
   savedProducts,
+  deliveryFee,
+  freeDeliveryThreshold,
   onBack,
   onAdd,
   onOpen,
   onSave,
 }: {
   products: Product[];
+  categories: Category[];
   loading: boolean;
   lang: Lang;
   savedProducts: string[];
+  deliveryFee: number;
+  freeDeliveryThreshold: number;
   onBack: () => void;
   onAdd: (product: Product, quantity?: number, variant?: ProductVariant | null) => void;
   onOpen: (product: Product) => void;
@@ -146,6 +152,9 @@ function ProductDetailRoute({
       relatedProducts={relatedProducts}
       savedProducts={savedProducts}
       lang={lang}
+      categoryName={categories.find((category) => category.id === product.category_id)?.name ?? ''}
+      deliveryFee={deliveryFee}
+      freeDeliveryThreshold={freeDeliveryThreshold}
       onBack={onBack}
       onAdd={onAdd}
       onOpen={onOpen}
@@ -668,9 +677,12 @@ function AppContent() {
         element={
           <ProductDetailRoute
             products={products}
+            categories={categories}
             loading={loading}
             lang={lang}
             savedProducts={savedProducts}
+            deliveryFee={deliveryFee}
+            freeDeliveryThreshold={freeDeliveryThreshold}
             onBack={openListing}
             onAdd={(product, quantity, variant) => {
               cart.add(product, quantity, variant ?? null);
