@@ -1,17 +1,23 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Heart, Minus, Plus, Shirt, ShoppingBag, Watch } from 'lucide-react';
+import { ProductCard } from '@/components/ProductCard';
+import type { Lang } from '@/i18n';
 import { formatTsh } from '@/utils';
 import type { Product, ProductVariant } from '@/types';
 
 type ProductDetailPageProps = {
   product: Product;
+  relatedProducts: Product[];
+  savedProducts: string[];
+  lang: Lang;
   saved: boolean;
   onBack: () => void;
-  onAdd: (quantity?: number, variant?: ProductVariant | null) => void;
-  onSave: () => void;
+  onAdd: (product: Product, quantity?: number, variant?: ProductVariant | null) => void;
+  onOpen: (product: Product) => void;
+  onSave: (productId: string) => void;
 };
 
-export function ProductDetailPage({ product, onBack, onAdd, saved, onSave }: ProductDetailPageProps) {
+export function ProductDetailPage({ product, relatedProducts, savedProducts, lang, onBack, onAdd, onOpen, saved, onSave }: ProductDetailPageProps) {
   const [quantity, setQuantity] = useState(1);
   const variants = useMemo(() => {
     if (product.variants && product.variants.length > 0) return product.variants;
@@ -27,6 +33,10 @@ export function ProductDetailPage({ product, onBack, onAdd, saved, onSave }: Pro
     }] satisfies ProductVariant[];
   }, [product]);
   const [selectedVariantId, setSelectedVariantId] = useState(variants[0]?.id ?? product.id);
+  useEffect(() => {
+    setSelectedVariantId(variants[0]?.id ?? product.id);
+    setQuantity(1);
+  }, [product.id, variants]);
   const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? variants[0];
   const currentPrice = selectedVariant?.variant_price ?? product.sale_price ?? product.price;
   const currentStock = selectedVariant?.variant_stock ?? product.stock;
@@ -45,6 +55,11 @@ export function ProductDetailPage({ product, onBack, onAdd, saved, onSave }: Pro
       </button>
       <div className="grid gap-8 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-orange-100 sm:p-8 lg:grid-cols-2">
         <div className="min-w-0 self-center">
+          <div className="mb-5 flex aspect-square max-h-[34rem] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-orange-50 to-[#FFF1E6] text-orange-400">
+            {(selectedVariant?.image_url || product.image_url) ? (
+              <img src={selectedVariant?.image_url || product.image_url || ''} alt={selectedVariant?.alt_text || product.name} className="h-full w-full object-contain p-4" />
+            ) : visual}
+          </div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-sm font-bold text-slate-800">Choose an option</p>
             {variants.length > 2 && <span className="text-xs text-slate-500">Swipe to see more →</span>}
@@ -75,7 +90,7 @@ export function ProductDetailPage({ product, onBack, onAdd, saved, onSave }: Pro
               {product.sale_price ? 'On sale' : 'Everyday favourite'}
             </span>
             <button
-              onClick={onSave}
+              onClick={() => onSave(product.id)}
               className={`rounded-full border p-3 ${saved ? 'border-orange-500 text-orange-500' : 'border-slate-200 text-slate-400'}`}
               aria-label={saved ? 'Remove from saved products' : 'Save product'}
             >
@@ -111,7 +126,7 @@ export function ProductDetailPage({ product, onBack, onAdd, saved, onSave }: Pro
               </button>
             </div>
             <button
-              onClick={() => onAdd(quantity, selectedVariant)}
+              onClick={() => onAdd(product, quantity, selectedVariant)}
               disabled={currentStock === 0}
               className="flex-1 rounded-xl bg-orange-500 px-6 py-3 font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
@@ -128,6 +143,26 @@ export function ProductDetailPage({ product, onBack, onAdd, saved, onSave }: Pro
           </div>
         </div>
       </div>
+      {relatedProducts.length > 0 && (
+        <section className="mt-12">
+          <div className="mb-5">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500">{lang === 'sw' ? 'Unaweza pia kupenda' : 'You may also like'}</p>
+            <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900">{lang === 'sw' ? 'Bidhaa zinazohusiana' : 'Related products'}</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+            {relatedProducts.map((relatedProduct) => (
+              <ProductCard
+                key={relatedProduct.id}
+                product={relatedProduct}
+                saved={savedProducts.includes(relatedProduct.id)}
+                onSave={() => onSave(relatedProduct.id)}
+                onAdd={onAdd}
+                onOpen={() => onOpen(relatedProduct)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </section>
   );
 }
