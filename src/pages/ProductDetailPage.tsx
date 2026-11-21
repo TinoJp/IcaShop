@@ -34,7 +34,6 @@ export function ProductDetailPage({ product, relatedProducts, savedProducts, lan
     setQuantity(1);
   }, [product.id, variants, galleryImages]);
   const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
-  const selectedVariantIndex = Math.max(0, variants.findIndex((variant) => variant.id === selectedVariant?.id));
   const selectedImage = galleryImages.find((image) => image.id === selectedImageId) ?? galleryImages[0];
   const currentPrice = selectedVariant?.variant_price ?? product.sale_price ?? product.price;
   const currentStock = selectedVariant?.variant_stock ?? product.stock;
