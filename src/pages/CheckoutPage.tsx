@@ -54,6 +54,7 @@ export function Checkout({ items, subtotal, profile, deliveryFee, freeDeliveryTh
     try {
       const payload = items.map((item) => ({
         product_id: item.product.id,
+        variant_id: item.variant?.id ?? null,
         quantity: item.quantity,
       }));
 

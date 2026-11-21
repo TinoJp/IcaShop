@@ -5,8 +5,17 @@ import { formatTsh, orderStatusLabels, orderStatusStyles } from '@/utils';
 import type { OrderStatus, OrderWithItems } from '@/types';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 
-const transitions: Partial<Record<OrderStatus, OrderStatus[]>> = { pending: ['delivered', 'cancelled'] };
-const nextLabel: Partial<Record<OrderStatus, string>> = { delivered: 'Mark delivered', cancelled: 'Cancel order' };
+const transitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['shipped', 'cancelled'],
+  shipped: ['delivered'],
+};
+const nextLabel: Partial<Record<OrderStatus, string>> = {
+  confirmed: 'Confirm order',
+  shipped: 'Mark shipped',
+  delivered: 'Mark delivered',
+  cancelled: 'Cancel order',
+};
 const phoneLink = (phone: string) => phone.replace(/[^0-9+]/g, '');
 
 export function AdminOrders() {
@@ -103,7 +112,7 @@ export function AdminOrders() {
         </label>
         <select aria-label="Filter order status" value={filter} onChange={(event) => setFilter(event.target.value)} className="rounded-xl border bg-white px-3 py-2 text-sm font-semibold">
           <option value="all">All statuses</option>
-          {(['pending', 'delivered', 'cancelled'] as OrderStatus[]).map((status) => <option key={status} value={status}>{orderStatusLabels[status]}</option>)}
+          {(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] as OrderStatus[]).map((status) => <option key={status} value={status}>{orderStatusLabels[status]}</option>)}
           <option value="paid">Paid</option>
         </select>
         <button onClick={() => void load()} className="rounded-xl bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700">Refresh</button>

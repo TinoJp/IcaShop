@@ -4,6 +4,7 @@ interface R2Bucket {
     value: ArrayBuffer,
     options: { httpMetadata: { contentType: string; cacheControl: string } },
   ): Promise<unknown>;
+  head(key: string): Promise<{ key: string } | null>;
   delete(key: string): Promise<void>;
 }
 
@@ -181,7 +182,9 @@ async function deleteImage(request: Request, env: Env, user: AuthenticatedUser):
   }
 
   const key = imageKeyFromUrl(body.imageUrl, env);
-  if (!key) return jsonResponse({ deleted: false }, 200, request.headers.get('Origin'));
+  if (!key) {
+    throw new HttpError(400, 'The image URL is invalid or is not managed by image storage.');
+  }
   const isAvatar = key.startsWith('avatars/');
   const ownerId = key.split('/')[1];
   if (body.kind === 'avatar') {
@@ -192,6 +195,10 @@ async function deleteImage(request: Request, env: Env, user: AuthenticatedUser):
     await requireAdmin(user, env, token);
   }
 
+  const object = await env.IMAGES.head(key);
+  if (!object) {
+    throw new HttpError(404, 'The image no longer exists in storage.');
+  }
   await env.IMAGES.delete(key);
   return jsonResponse({ deleted: true }, 200, request.headers.get('Origin'));
 }

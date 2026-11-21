@@ -4,6 +4,7 @@ export type ImageKind = 'avatar' | 'product';
 
 type ImageApiResponse = {
   imageUrl?: string;
+  deleted?: boolean;
   error?: string;
 };
 
@@ -48,10 +49,17 @@ export async function uploadImage(file: File, kind: ImageKind, entityId: string)
   return result.imageUrl;
 }
 
+export function validateDeleteResponse(result: ImageApiResponse): void {
+  if (result.deleted !== true) {
+    throw new Error(result.error ?? 'The image could not be found or deleted.');
+  }
+}
+
 export async function deleteImage(kind: ImageKind, imageUrl: string): Promise<void> {
-  await imageRequest('/delete', {
+  const result = await imageRequest('/delete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kind, imageUrl }),
   });
+  validateDeleteResponse(result);
 }
