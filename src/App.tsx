@@ -30,6 +30,7 @@ import { deleteImage, uploadImage } from '@/lib/imageStorage';
 import { siteConfig } from '@/siteConfig';
 import { useCart } from '@/cart';
 import { normalizeTanzanianPhone, isTanzanianPhone } from '@/utils';
+import { mapProductImages } from '@/utils/productMedia';
 import { LanguageProvider, useLanguage, type Lang } from '@/i18n';
 import { CartDrawer } from '@/components/CartDrawer';
 import { Checkout, OrderConfirmation } from '@/pages/CheckoutPage';
@@ -351,37 +352,27 @@ function AppContent() {
         supabase.from('settings').select('setting_key, setting_value'),
         supabase
           .from('product_images')
-          .select('id, product_id, image_url, alt_text, display_order, variant_name, variant_price, variant_stock')
+          .select('id, product_id, image_url, alt_text, display_order, variant_name, variant_price, variant_stock, is_archived')
           .order('display_order'),
       ]);
 
-      if (categoriesResult.error || productsResult.error) {
+      if (categoriesResult.error || productsResult.error || imagesResult.error) {
         setError('We could not load the catalog right now. Please refresh and try again.');
       } else {
         setCategories(categoriesResult.data ?? []);
-        const imagesByProduct = new Map<string, ProductVariant[]>();
+        const imagesByProduct = new Map<string, typeof imagesResult.data>();
         for (const image of imagesResult.data ?? []) {
-          const variant = {
-            id: image.id,
-            product_id: image.product_id,
-            image_url: image.image_url,
-            alt_text: image.alt_text ?? image.variant_name ?? 'Product image',
-            display_order: image.display_order ?? 0,
-            variant_name: image.variant_name ?? 'Default option',
-            variant_price: image.variant_price ?? null,
-            variant_stock: image.variant_stock ?? 0,
-          } satisfies ProductVariant;
           const list = imagesByProduct.get(image.product_id) ?? [];
-          list.push(variant);
+          list.push(image);
           imagesByProduct.set(image.product_id, list);
         }
         setProducts((productsResult.data ?? []).map((product) => {
-          const variants = imagesByProduct.get(product.id) ?? [];
-          const primaryImage = variants[0]?.image_url ?? null;
+          const media = mapProductImages(imagesByProduct.get(product.id) ?? []);
           return {
             ...product,
-            image_url: primaryImage,
-            variants: variants.length ? variants : undefined,
+            image_url: media.galleryImages[0]?.image_url ?? null,
+            gallery_images: media.galleryImages,
+            variants: media.variants.length ? media.variants : undefined,
           };
         }));
       }

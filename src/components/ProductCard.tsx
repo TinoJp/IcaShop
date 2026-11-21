@@ -48,10 +48,10 @@ export function ProductCard({ product, saved, onSave, onAdd, onOpen }: ProductCa
           <Star size={10} fill="currentColor" /> <span className="truncate text-slate-400">Ready to ship</span>
         </div>
         <button
-          onClick={() => onAdd(product)}
+          onClick={() => product.variants?.length ? onOpen() : onAdd(product)}
           className="mt-3 w-full rounded-lg bg-orange-500 py-2 text-[10px] font-bold text-white transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200 sm:mt-4 sm:rounded-xl sm:py-2.5 sm:text-xs"
         >
-          Add to cart
+          {product.variants?.length ? 'Choose options' : 'Add to cart'}
         </button>
       </div>
     </article>
