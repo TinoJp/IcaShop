@@ -175,7 +175,7 @@ export function AdminOrders() {
                       </section>
                       <section className="text-sm">
                         <p className="font-bold">Items</p>
-                        <ul className="mt-2 space-y-1">{order.order_items.map((item) => <li key={item.id} className="flex justify-between gap-3"><span className="text-slate-600">{item.product_name} × {item.quantity}</span><b>{formatTsh(item.line_total)}</b></li>)}</ul>
+                        <ul className="mt-2 space-y-1">{order.order_items.map((item) => <li key={item.id} className="flex justify-between gap-3"><span className="text-slate-600">{item.product_name}{item.variant_name ? ` (${item.variant_name})` : ''} × {item.quantity}</span><b>{formatTsh(item.line_total)}</b></li>)}</ul>
                         <div className="mt-3 space-y-1 border-t pt-2 text-xs">
                           <p className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatTsh(order.total_amount)}</span></p>
                           <p className="flex justify-between text-slate-500"><span>Delivery</span><span>{order.delivery_fee ? formatTsh(order.delivery_fee) : 'Free'}</span></p>
