@@ -1,11 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient as SupabaseClientInstance } from '@supabase/supabase-js';
 
 type SupabaseEnv = {
   VITE_SUPABASE_URL?: string;
   VITE_SUPABASE_ANON_KEY?: string;
 };
 
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = SupabaseClientInstance;
 
 let cachedClient: SupabaseClient | null = null;
 

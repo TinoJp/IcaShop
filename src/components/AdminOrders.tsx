@@ -5,8 +5,17 @@ import { formatTsh, orderStatusLabels, orderStatusStyles } from '@/utils';
 import type { OrderStatus, OrderWithItems } from '@/types';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 
-const transitions: Partial<Record<OrderStatus, OrderStatus[]>> = { pending: ['delivered', 'cancelled'] };
-const nextLabel: Partial<Record<OrderStatus, string>> = { delivered: 'Mark delivered', cancelled: 'Cancel order' };
+const transitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['shipped', 'cancelled'],
+  shipped: ['delivered'],
+};
+const nextLabel: Partial<Record<OrderStatus, string>> = {
+  confirmed: 'Confirm order',
+  shipped: 'Mark shipped',
+  delivered: 'Mark delivered',
+  cancelled: 'Cancel order',
+};
 const phoneLink = (phone: string) => phone.replace(/[^0-9+]/g, '');
 
 export function AdminOrders() {
@@ -103,7 +112,7 @@ export function AdminOrders() {
         </label>
         <select aria-label="Filter order status" value={filter} onChange={(event) => setFilter(event.target.value)} className="rounded-xl border bg-white px-3 py-2 text-sm font-semibold">
           <option value="all">All statuses</option>
-          {(['pending', 'delivered', 'cancelled'] as OrderStatus[]).map((status) => <option key={status} value={status}>{orderStatusLabels[status]}</option>)}
+          {(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'] as OrderStatus[]).map((status) => <option key={status} value={status}>{orderStatusLabels[status]}</option>)}
           <option value="paid">Paid</option>
         </select>
         <button onClick={() => void load()} className="rounded-xl bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700">Refresh</button>
@@ -166,7 +175,7 @@ export function AdminOrders() {
                       </section>
                       <section className="text-sm">
                         <p className="font-bold">Items</p>
-                        <ul className="mt-2 space-y-1">{order.order_items.map((item) => <li key={item.id} className="flex justify-between gap-3"><span className="text-slate-600">{item.product_name} × {item.quantity}</span><b>{formatTsh(item.line_total)}</b></li>)}</ul>
+                        <ul className="mt-2 space-y-1">{order.order_items.map((item) => <li key={item.id} className="flex justify-between gap-3"><span className="text-slate-600">{item.product_name}{item.variant_name ? ` (${item.variant_name})` : ''} × {item.quantity}</span><b>{formatTsh(item.line_total)}</b></li>)}</ul>
                         <div className="mt-3 space-y-1 border-t pt-2 text-xs">
                           <p className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatTsh(order.total_amount)}</span></p>
                           <p className="flex justify-between text-slate-500"><span>Delivery</span><span>{order.delivery_fee ? formatTsh(order.delivery_fee) : 'Free'}</span></p>

@@ -54,6 +54,7 @@ export function Checkout({ items, subtotal, profile, deliveryFee, freeDeliveryTh
     try {
       const payload = items.map((item) => ({
         product_id: item.product.id,
+        variant_id: item.variant?.id ?? null,
         quantity: item.quantity,
       }));
 
@@ -71,12 +72,12 @@ export function Checkout({ items, subtotal, profile, deliveryFee, freeDeliveryTh
       // WhatsApp message uses the prices the server actually charged.
       const { data: orderItems } = await supabase
         .from('order_items')
-        .select('product_name, unit_price, quantity, line_total')
+        .select('product_name, variant_name, unit_price, quantity, line_total')
         .eq('order_id', data.order_id)
         .order('created_at');
 
       const orderLines = orderItems?.length
-        ? orderItems.map((item) => `• ${item.product_name} × ${item.quantity} — ${formatTsh(item.line_total)} (${formatTsh(item.unit_price)} each)`)
+        ? orderItems.map((item) => `• ${item.product_name}${item.variant_name ? ` (${item.variant_name})` : ''} × ${item.quantity} — ${formatTsh(item.line_total)} (${formatTsh(item.unit_price)} each)`)
         : items.map((item) => `• ${item.product.name} × ${item.quantity}`).join('\n');
       const orderReference = String(data.order_id).slice(0, 8).toUpperCase();
       const message = [
