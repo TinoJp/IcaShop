@@ -89,7 +89,7 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
       }
       setProducts((prodRes.data ?? []).map((product) => {
         const variants = imageByProduct.get(product.id) ?? [];
-        return { ...product, image_url: (imageRes.data ?? []).find((image) => image.product_id === product.id)?.image_url ?? null, variants } as ProductAdmin;
+        return { ...product, image_url: (imageRes.data ?? []).find((image) => image.product_id === product.id && (!image.variant_name?.trim() || !image.is_archived))?.image_url ?? null, variants } as ProductAdmin;
       }));
       setCategories(catRes.data ?? []);
     }
@@ -248,13 +248,14 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
       if (productId) {
         const { data: existingVariants, error: variantLookupError } = await supabase
           .from('product_images')
-          .select('id, image_url')
+          .select('id, image_url, variant_name')
           .eq('product_id', productId)
           .not('variant_name', 'is', null)
           .eq('is_archived', false);
         if (variantLookupError) throw variantLookupError;
 
-        const existingById = new Map((existingVariants ?? []).map((variant) => [variant.id, variant]));
+        const activeVariantRows = (existingVariants ?? []).filter((variant) => variant.variant_name?.trim());
+        const existingById = new Map(activeVariantRows.map((variant) => [variant.id, variant]));
         const retainedIds = new Set(variantDrafts.filter((variant) => existingById.has(variant.id)).map((variant) => variant.id));
         const replacedImages: string[] = [];
 
@@ -290,7 +291,7 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
             }
           }
 
-          const removed = (existingVariants ?? []).filter((variant) => !retainedIds.has(variant.id));
+          const removed = activeVariantRows.filter((variant) => !retainedIds.has(variant.id));
           const removedIds = removed.map((variant) => variant.id);
           if (removedIds.length) {
             const { data: orderedItems, error: orderLookupError } = await supabase
