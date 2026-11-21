@@ -30,6 +30,7 @@ import { deleteImage, uploadImage } from '@/lib/imageStorage';
 import { siteConfig } from '@/siteConfig';
 import { useCart } from '@/cart';
 import { normalizeTanzanianPhone, isTanzanianPhone } from '@/utils';
+import { mapProductImages } from '@/utils/productMedia';
 import { LanguageProvider, useLanguage, type Lang } from '@/i18n';
 import { CartDrawer } from '@/components/CartDrawer';
 import { Checkout, OrderConfirmation } from '@/pages/CheckoutPage';
@@ -366,31 +367,12 @@ function AppContent() {
           imagesByProduct.set(image.product_id, list);
         }
         setProducts((productsResult.data ?? []).map((product) => {
-          const images = imagesByProduct.get(product.id) ?? [];
-          const visibleImages = images.filter((image) => !image.variant_name?.trim() || !image.is_archived);
-          const galleryImages = visibleImages.map((image) => ({
-            id: image.id,
-            image_url: image.image_url,
-            alt_text: image.alt_text ?? 'Product image',
-            display_order: image.display_order ?? 0,
-          }));
-          const variants = visibleImages
-            .filter((image) => typeof image.variant_name === 'string' && image.variant_name.trim().length > 0)
-            .map((image) => ({
-              id: image.id,
-              product_id: image.product_id,
-              image_url: image.image_url,
-              alt_text: image.alt_text ?? image.variant_name,
-              display_order: image.display_order ?? 0,
-              variant_name: image.variant_name!.trim(),
-              variant_price: image.variant_price ?? null,
-              variant_stock: image.variant_stock ?? 0,
-            } satisfies ProductVariant));
+          const media = mapProductImages(imagesByProduct.get(product.id) ?? []);
           return {
             ...product,
-            image_url: galleryImages[0]?.image_url ?? null,
-            gallery_images: galleryImages,
-            variants: variants.length ? variants : undefined,
+            image_url: media.galleryImages[0]?.image_url ?? null,
+            gallery_images: media.galleryImages,
+            variants: media.variants.length ? media.variants : undefined,
           };
         }));
       }
