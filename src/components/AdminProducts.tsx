@@ -257,6 +257,12 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
         const activeVariantRows = (existingVariants ?? []).filter((variant) => variant.variant_name?.trim());
         const existingById = new Map(activeVariantRows.map((variant) => [variant.id, variant]));
         const retainedIds = new Set(variantDrafts.filter((variant) => existingById.has(variant.id)).map((variant) => variant.id));
+        const existingVariantIds = activeVariantRows.map((variant) => variant.id);
+        const { data: orderedItems, error: orderLookupError } = existingVariantIds.length
+          ? await supabase.from('order_items').select('variant_id').in('variant_id', existingVariantIds)
+          : { data: [], error: null };
+        if (orderLookupError) throw orderLookupError;
+        const referencedIds = new Set((orderedItems ?? []).map((item) => item.variant_id));
         const replacedImages: string[] = [];
 
         try {
@@ -281,7 +287,11 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
               is_archived: false,
             };
             if (existingById.has(item.variant.id)) {
-              const oldImage = existingById.get(item.variant.id)!.image_url;
+              const existingVariant = existingById.get(item.variant.id)!;
+              if (referencedIds.has(item.variant.id) && existingVariant.variant_name?.trim() !== item.variant.name.trim()) {
+                throw new Error('This option is linked to previous orders. Remove it and add a new option instead of renaming it.');
+              }
+              const oldImage = existingVariant.image_url;
               const { error: updateVariantError } = await supabase.from('product_images').update(values).eq('id', item.variant.id);
               if (updateVariantError) throw updateVariantError;
               if (oldImage !== item.imageUrl) replacedImages.push(oldImage);
@@ -294,12 +304,6 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
           const removed = activeVariantRows.filter((variant) => !retainedIds.has(variant.id));
           const removedIds = removed.map((variant) => variant.id);
           if (removedIds.length) {
-            const { data: orderedItems, error: orderLookupError } = await supabase
-              .from('order_items')
-              .select('variant_id')
-              .in('variant_id', removedIds);
-            if (orderLookupError) throw orderLookupError;
-            const referencedIds = new Set((orderedItems ?? []).map((item) => item.variant_id));
             const archiveIds = removedIds.filter((id) => referencedIds.has(id));
             const deleteIds = removedIds.filter((id) => !referencedIds.has(id));
 
