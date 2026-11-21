@@ -355,7 +355,7 @@ function AppContent() {
           .order('display_order'),
       ]);
 
-      if (categoriesResult.error || productsResult.error) {
+      if (categoriesResult.error || productsResult.error || imagesResult.error) {
         setError('We could not load the catalog right now. Please refresh and try again.');
       } else {
         setCategories(categoriesResult.data ?? []);
@@ -367,14 +367,15 @@ function AppContent() {
         }
         setProducts((productsResult.data ?? []).map((product) => {
           const images = imagesByProduct.get(product.id) ?? [];
-          const galleryImages = images.map((image) => ({
+          const visibleImages = images.filter((image) => !image.variant_name?.trim() || !image.is_archived);
+          const galleryImages = visibleImages.map((image) => ({
             id: image.id,
             image_url: image.image_url,
             alt_text: image.alt_text ?? 'Product image',
             display_order: image.display_order ?? 0,
           }));
-          const variants = images
-            .filter((image) => typeof image.variant_name === 'string' && image.variant_name.trim().length > 0 && !image.is_archived)
+          const variants = visibleImages
+            .filter((image) => typeof image.variant_name === 'string' && image.variant_name.trim().length > 0)
             .map((image) => ({
               id: image.id,
               product_id: image.product_id,
