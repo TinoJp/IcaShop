@@ -45,8 +45,8 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
   const [deleting, setDeleting] = useState(false);
   const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
 
-  const createVariantDraft = (name: string, price: string, stock: string, image_url = '', file?: File | null): VariantDraft => ({
-    id: crypto.randomUUID(),
+  const createVariantDraft = (name: string, price: string, stock: string, image_url = '', file?: File | null, id = crypto.randomUUID()): VariantDraft => ({
+    id,
     name,
     price,
     stock,
@@ -64,7 +64,7 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
       supabase.from('categories').select('id, name, slug').order('display_order'),
       supabase
         .from('product_images')
-        .select('id, product_id, image_url, alt_text, variant_name, variant_price, variant_stock, display_order')
+        .select('id, product_id, image_url, alt_text, variant_name, variant_price, variant_stock, display_order, is_archived')
         .order('display_order'),
     ]);
     if (prodRes.error || catRes.error || imageRes.error) {
@@ -72,13 +72,14 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
     } else {
       const imageByProduct = new Map<string, ProductVariant[]>();
       for (const image of imageRes.data ?? []) {
+        if (!image.variant_name?.trim() || image.is_archived) continue;
         const variant: ProductVariant = {
           id: image.id,
           product_id: image.product_id,
           image_url: image.image_url,
-          alt_text: image.alt_text ?? image.variant_name ?? 'Product image',
+          alt_text: image.alt_text ?? image.variant_name,
           display_order: image.display_order ?? 0,
-          variant_name: image.variant_name ?? 'Default option',
+          variant_name: image.variant_name.trim(),
           variant_price: image.variant_price ?? null,
           variant_stock: image.variant_stock ?? 0,
         };
@@ -107,20 +108,13 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
   });
 
   const startEdit = (product: ProductAdmin) => {
-    const variants = (product.variants?.length ? product.variants : [{
-      id: product.id,
-      product_id: product.id,
-      image_url: product.image_url ?? '',
-      alt_text: product.name,
-      display_order: 0,
-      variant_name: product.name,
-      variant_price: product.sale_price ?? product.price,
-      variant_stock: product.stock,
-    }]).map((variant) => createVariantDraft(
-      variant.variant_name || product.name,
-      String(variant.variant_price ?? product.price),
-      String(variant.variant_stock ?? product.stock),
+    const variants = (product.variants ?? []).map((variant) => createVariantDraft(
+      variant.variant_name,
+      variant.variant_price === null ? '' : String(variant.variant_price),
+      String(variant.variant_stock),
       variant.image_url,
+      null,
+      variant.id,
     ));
     setEditing({
       id: product.id,
@@ -134,13 +128,13 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
       is_archived: product.is_archived,
       image_url: product.image_url ?? '',
     });
-    setVariantDrafts(variants.length ? variants : [createVariantDraft(product.name, String(product.price), String(product.stock), product.image_url ?? '')]);
+    setVariantDrafts(variants);
     setFormError('');
   };
 
   const startCreate = () => {
     setEditing({ ...emptyForm, category_id: categories[0]?.id ?? '' });
-    setVariantDrafts([createVariantDraft('', String(0), String(1), '')]);
+    setVariantDrafts([]);
     setFormError('');
   };
 
@@ -207,8 +201,8 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
       setSaving(false);
       return;
     }
-    if (variantDrafts.length === 0 || variantDrafts.some((variant) => !variant.name.trim())) {
-      setFormError('Every product photo needs a name/label.');
+    if (variantDrafts.some((variant) => !variant.name.trim() || (!variant.image_url && !variant.file))) {
+      setFormError('Every product option needs an image and a name/label.');
       setSaving(false);
       return;
     }
@@ -252,50 +246,84 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
       }
 
       if (productId) {
-        const { data: existingImages, error: imageLookupError } = await supabase
+        const { data: existingVariants, error: variantLookupError } = await supabase
           .from('product_images')
           .select('id, image_url')
           .eq('product_id', productId)
-          .order('display_order');
+          .not('variant_name', 'is', null)
+          .eq('is_archived', false);
+        if (variantLookupError) throw variantLookupError;
 
-        if (imageLookupError) throw imageLookupError;
+        const existingById = new Map((existingVariants ?? []).map((variant) => [variant.id, variant]));
+        const retainedIds = new Set(variantDrafts.filter((variant) => existingById.has(variant.id)).map((variant) => variant.id));
+        const stagedUploads: string[] = [];
+        const replacedImages: string[] = [];
 
-        const imageIdsToDelete = (existingImages ?? []).map((item) => item.id);
-        if (imageIdsToDelete.length) {
-          const { error: deleteImagesError } = await supabase.from('product_images').delete().in('id', imageIdsToDelete);
-          if (deleteImagesError) throw deleteImagesError;
-        }
+        try {
+          const prepared = await Promise.all(variantDrafts.map(async (variant, index) => {
+            const imageUrl = variant.file ? await uploadImage(variant.file, 'product', productId) : variant.image_url;
+            if (variant.file && imageUrl) stagedUploads.push(imageUrl);
+            if (!imageUrl) throw new Error('Every product option must have an image.');
+            const parsedPrice = variant.price.trim() === '' ? null : Number(variant.price);
+            const parsedStock = Number(variant.stock);
+            if (parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0)) throw new Error('Enter a valid option price.');
+            if (!Number.isFinite(parsedStock) || parsedStock < 0) throw new Error('Enter a valid option stock quantity.');
+            return { variant, index, imageUrl, parsedPrice, parsedStock };
+          }));
 
-        if (existingImages?.length) {
-          for (const existingImage of existingImages) {
-            try {
-              await deleteImage('product', existingImage.image_url);
-            } catch (cleanupError) {
-              console.error('Could not remove the existing product image:', cleanupError);
+          for (const item of prepared) {
+            const values = {
+              image_url: item.imageUrl,
+              alt_text: item.variant.name.trim(),
+              variant_name: item.variant.name.trim(),
+              variant_price: item.parsedPrice,
+              variant_stock: item.parsedStock,
+              display_order: item.index,
+              is_archived: false,
+            };
+            if (existingById.has(item.variant.id)) {
+              const oldImage = existingById.get(item.variant.id)!.image_url;
+              const { error: updateVariantError } = await supabase.from('product_images').update(values).eq('id', item.variant.id);
+              if (updateVariantError) throw updateVariantError;
+              if (oldImage !== item.imageUrl) replacedImages.push(oldImage);
+            } else {
+              const { error: insertVariantError } = await supabase.from('product_images').insert({ ...values, product_id: productId });
+              if (insertVariantError) throw insertVariantError;
             }
           }
-        }
 
-        const newVariants = await Promise.all(variantDrafts.map(async (variant, index) => {
-          const variantPrice = variant.price === '' ? null : Number(variant.price);
-          const variantStock = Number(variant.stock || '0');
-          const imageUrl = variant.file ? await uploadImage(variant.file, 'product', productId) : variant.image_url;
-          if (!imageUrl) return null;
-          const { error: insertError } = await supabase.from('product_images').insert({
-            product_id: productId,
-            image_url: imageUrl,
-            alt_text: variant.name.trim() || editing.name.trim(),
-            variant_name: variant.name.trim() || `Option ${index + 1}`,
-            variant_price: variantPrice && variantPrice >= 0 ? variantPrice : null,
-            variant_stock: Number.isFinite(variantStock) && variantStock >= 0 ? variantStock : 0,
-            display_order: index,
-          });
-          if (insertError) throw insertError;
-          return imageUrl;
-        }));
+          const removed = (existingVariants ?? []).filter((variant) => !retainedIds.has(variant.id));
+          const removedIds = removed.map((variant) => variant.id);
+          if (removedIds.length) {
+            const { data: orderedItems, error: orderLookupError } = await supabase
+              .from('order_items')
+              .select('variant_id')
+              .in('variant_id', removedIds);
+            if (orderLookupError) throw orderLookupError;
+            const referencedIds = new Set((orderedItems ?? []).map((item) => item.variant_id));
+            const archiveIds = removedIds.filter((id) => referencedIds.has(id));
+            const deleteIds = removedIds.filter((id) => !referencedIds.has(id));
 
-        if (newVariants.some((item) => item === null)) {
-          setFormError('One or more variant images could not be saved.');
+            if (archiveIds.length) {
+              const { error: archiveError } = await supabase.from('product_images').update({ is_archived: true, variant_stock: 0 }).in('id', archiveIds);
+              if (archiveError) throw archiveError;
+            }
+            if (deleteIds.length) {
+              const { error: deleteError } = await supabase.from('product_images').delete().in('id', deleteIds);
+              if (deleteError) throw deleteError;
+              for (const removedVariant of removed.filter((variant) => deleteIds.includes(variant.id))) {
+                replacedImages.push(removedVariant.image_url);
+              }
+            }
+          }
+
+          for (const oldImageUrl of new Set(replacedImages)) {
+            try { await deleteImage('product', oldImageUrl); }
+            catch (cleanupError) { console.error('Could not remove an unreferenced product image:', cleanupError); }
+          }
+        } catch (saveError) {
+          await Promise.allSettled(stagedUploads.map((url) => deleteImage('product', url)));
+          throw saveError;
         }
       }
       setEditing(null);
