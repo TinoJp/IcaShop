@@ -89,7 +89,7 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
       }
       setProducts((prodRes.data ?? []).map((product) => {
         const variants = imageByProduct.get(product.id) ?? [];
-        return { ...product, image_url: variants[0]?.image_url ?? null, variants } as ProductAdmin;
+        return { ...product, image_url: (imageRes.data ?? []).find((image) => image.product_id === product.id)?.image_url ?? null, variants } as ProductAdmin;
       }));
       setCategories(catRes.data ?? []);
     }
@@ -256,13 +256,11 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
 
         const existingById = new Map((existingVariants ?? []).map((variant) => [variant.id, variant]));
         const retainedIds = new Set(variantDrafts.filter((variant) => existingById.has(variant.id)).map((variant) => variant.id));
-        const stagedUploads: string[] = [];
         const replacedImages: string[] = [];
 
         try {
           const prepared = await Promise.all(variantDrafts.map(async (variant, index) => {
             const imageUrl = variant.file ? await uploadImage(variant.file, 'product', productId) : variant.image_url;
-            if (variant.file && imageUrl) stagedUploads.push(imageUrl);
             if (!imageUrl) throw new Error('Every product option must have an image.');
             const parsedPrice = variant.price.trim() === '' ? null : Number(variant.price);
             const parsedStock = Number(variant.stock);
@@ -322,7 +320,7 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
             catch (cleanupError) { console.error('Could not remove an unreferenced product image:', cleanupError); }
           }
         } catch (saveError) {
-          await Promise.allSettled(stagedUploads.map((url) => deleteImage('product', url)));
+          // Do not remove staged objects here: an earlier row update may already reference one.
           throw saveError;
         }
       }
