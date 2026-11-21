@@ -316,8 +316,19 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
           }
 
           for (const oldImageUrl of new Set(replacedImages)) {
-            try { await deleteImage('product', oldImageUrl); }
-            catch (cleanupError) { console.error('Could not remove an unreferenced product image:', cleanupError); }
+            const { data: remainingReferences, error: referenceError } = await supabase
+              .from('product_images')
+              .select('id')
+              .eq('image_url', oldImageUrl)
+              .limit(1);
+            if (referenceError) {
+              console.error('Could not verify product image references; keeping the object:', referenceError);
+              continue;
+            }
+            if (!remainingReferences?.length) {
+              try { await deleteImage('product', oldImageUrl); }
+              catch (cleanupError) { console.error('Could not remove an unreferenced product image:', cleanupError); }
+            }
           }
         } catch (saveError) {
           // Do not remove staged objects here: an earlier row update may already reference one.
@@ -352,7 +363,15 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
     } else {
       setDeleteTarget(null);
       const cleanupResults = await Promise.allSettled(
-        (images ?? []).map(({ image_url }) => deleteImage('product', image_url)),
+        [...new Set((images ?? []).map(({ image_url }) => image_url))].map(async (image_url) => {
+          const { data: remainingReferences, error: referenceError } = await supabase
+            .from('product_images')
+            .select('id')
+            .eq('image_url', image_url)
+            .limit(1);
+          if (referenceError) throw referenceError;
+          if (!remainingReferences?.length) await deleteImage('product', image_url);
+        }),
       );
       if (cleanupResults.some((result) => result.status === 'rejected')) {
         console.error('Could not remove every image for the deleted product:', cleanupResults);
