@@ -264,6 +264,12 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
         if (orderLookupError) throw orderLookupError;
         const referencedIds = new Set((orderedItems ?? []).map((item) => item.variant_id));
         const replacedImages: string[] = [];
+        for (const variant of variantDrafts) {
+          const existingVariant = existingById.get(variant.id);
+          if (existingVariant && referencedIds.has(variant.id) && existingVariant.variant_name?.trim() !== variant.name.trim()) {
+            throw new Error('This option is linked to previous orders. Remove it and add a new option instead of renaming it.');
+          }
+        }
 
         try {
           const prepared = await Promise.all(variantDrafts.map(async (variant, index) => {
@@ -288,9 +294,6 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
             };
             if (existingById.has(item.variant.id)) {
               const existingVariant = existingById.get(item.variant.id)!;
-              if (referencedIds.has(item.variant.id) && existingVariant.variant_name?.trim() !== item.variant.name.trim()) {
-                throw new Error('This option is linked to previous orders. Remove it and add a new option instead of renaming it.');
-              }
               const oldImage = existingVariant.image_url;
               const { error: updateVariantError } = await supabase.from('product_images').update(values).eq('id', item.variant.id);
               if (updateVariantError) throw updateVariantError;
