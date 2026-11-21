@@ -46,6 +46,7 @@ export function ProductDetailPage({ product, relatedProducts, savedProducts, lan
   );
   const selectVariant = (variant: ProductVariant) => {
     setSelectedVariantId(variant.id);
+    if (galleryImages.some((image) => image.id === variant.id)) setSelectedImageId(variant.id);
     setQuantity((value) => variant.variant_stock > 0 ? Math.min(value, variant.variant_stock) : 1);
   };
   const moveGallery = (direction: -1 | 1) => {
