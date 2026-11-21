@@ -23,27 +23,19 @@ type ProductDetailPageProps = {
 
 export function ProductDetailPage({ product, relatedProducts, savedProducts, lang, categoryName, deliveryFee, freeDeliveryThreshold, onBack, onAdd, onOpen, saved, onSave }: ProductDetailPageProps) {
   const [quantity, setQuantity] = useState(1);
-  const variants = useMemo(() => {
-    if (product.variants && product.variants.length > 0) return product.variants;
-    return [{
-      id: product.id,
-      product_id: product.id,
-      image_url: product.image_url ?? '',
-      alt_text: product.name,
-      display_order: 0,
-      variant_name: product.name,
-      variant_price: product.sale_price ?? product.price,
-      variant_stock: product.stock,
-    }] satisfies ProductVariant[];
-  }, [product]);
-  const [selectedVariantId, setSelectedVariantId] = useState(variants[0]?.id ?? product.id);
+  const variants = useMemo(() => product.variants ?? [], [product.variants]);
+  const galleryImages = useMemo(() => product.gallery_images ?? [], [product.gallery_images]);
+  const [selectedVariantId, setSelectedVariantId] = useState(variants[0]?.id ?? '');
+  const [selectedImageId, setSelectedImageId] = useState(galleryImages[0]?.id ?? '');
   const relatedTrackRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    setSelectedVariantId(variants[0]?.id ?? product.id);
+    setSelectedVariantId(variants[0]?.id ?? '');
+    setSelectedImageId(galleryImages[0]?.id ?? '');
     setQuantity(1);
-  }, [product.id, variants]);
-  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? variants[0];
+  }, [product.id, variants, galleryImages]);
+  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
   const selectedVariantIndex = Math.max(0, variants.findIndex((variant) => variant.id === selectedVariant?.id));
+  const selectedImage = galleryImages.find((image) => image.id === selectedImageId) ?? galleryImages[0];
   const currentPrice = selectedVariant?.variant_price ?? product.sale_price ?? product.price;
   const currentStock = selectedVariant?.variant_stock ?? product.stock;
   const visual = product.name.toLowerCase().includes('watch') ? (
@@ -58,8 +50,10 @@ export function ProductDetailPage({ product, relatedProducts, savedProducts, lan
     setQuantity((value) => variant.variant_stock > 0 ? Math.min(value, variant.variant_stock) : 1);
   };
   const moveGallery = (direction: -1 | 1) => {
-    const nextIndex = (selectedVariantIndex + direction + variants.length) % variants.length;
-    selectVariant(variants[nextIndex]);
+    if (galleryImages.length < 2) return;
+    const currentIndex = galleryImages.findIndex((image) => image.id === selectedImage?.id);
+    const nextIndex = (currentIndex + direction + galleryImages.length) % galleryImages.length;
+    setSelectedImageId(galleryImages[nextIndex].id);
   };
   const addSelectedToCart = () => onAdd(product, quantity, selectedVariant);
   const supportMessage = lang === 'sw'
@@ -75,10 +69,10 @@ export function ProductDetailPage({ product, relatedProducts, savedProducts, lan
       <div className="grid gap-8 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-orange-100 sm:p-8 lg:grid-cols-2">
         <div className="min-w-0 self-center">
           <div className="relative mb-4 flex aspect-square max-h-[34rem] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-orange-50 to-[#FFF1E6] text-orange-400">
-            {(selectedVariant?.image_url || product.image_url) ? (
-              <img src={selectedVariant?.image_url || product.image_url || ''} alt={selectedVariant?.alt_text || product.name} className="h-full w-full object-contain p-4" />
+            {(selectedImage?.image_url || selectedVariant?.image_url || product.image_url) ? (
+              <img src={selectedImage?.image_url || selectedVariant?.image_url || product.image_url || ''} alt={selectedImage?.alt_text || selectedVariant?.alt_text || product.name} className="h-full w-full object-contain p-4" />
             ) : visual}
-            {variants.length > 1 && (
+            {galleryImages.length > 1 && (
               <>
                 <button type="button" onClick={() => moveGallery(-1)} aria-label="Show previous product image" className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-700 shadow transition hover:bg-white">
                   <ChevronLeft size={22} />
@@ -87,30 +81,26 @@ export function ProductDetailPage({ product, relatedProducts, savedProducts, lan
                   <ChevronRight size={22} />
                 </button>
                 <span className="absolute bottom-3 right-3 rounded-full bg-slate-900/65 px-2.5 py-1 text-xs font-semibold text-white">
-                  {selectedVariantIndex + 1} / {variants.length}
+                  {Math.max(0, galleryImages.findIndex((image) => image.id === selectedImage?.id)) + 1} / {galleryImages.length}
                 </span>
               </>
             )}
           </div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-sm font-bold text-slate-800">{lang === 'sw' ? 'Chagua picha au chaguo' : 'Choose an image or option'}</p>
-            {variants.length > 3 && <span className="text-xs text-slate-500">{lang === 'sw' ? 'Telezesha kuona zaidi →' : 'Swipe to see more →'}</span>}
+            {galleryImages.length > 3 && <span className="text-xs text-slate-500">{lang === 'sw' ? 'Telezesha kuona zaidi →' : 'Swipe to see more →'}</span>}
           </div>
           <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 [scrollbar-width:thin]">
-            {variants.map((variant) => (
+            {galleryImages.map((image) => (
               <button
-                key={variant.id}
+                key={image.id}
                 type="button"
-                onClick={() => selectVariant(variant)}
-                aria-pressed={selectedVariantId === variant.id}
-                className={`w-28 min-w-28 snap-start overflow-hidden rounded-xl border bg-white text-left transition ${selectedVariantId === variant.id ? 'border-orange-500 ring-2 ring-orange-200' : 'border-slate-200 hover:border-orange-300'}`}
+                onClick={() => setSelectedImageId(image.id)}
+                aria-pressed={selectedImage?.id === image.id}
+                className={`w-28 min-w-28 snap-start overflow-hidden rounded-xl border bg-white text-left transition ${selectedImage?.id === image.id ? 'border-orange-500 ring-2 ring-orange-200' : 'border-slate-200 hover:border-orange-300'}`}
               >
                 <div className="flex aspect-square items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50 to-[#FFF1E6] text-orange-400">
-                  {variant.image_url ? <img src={variant.image_url} alt="" className="h-full w-full object-contain p-1" /> : visual}
-                </div>
-                <div className="p-2">
-                  <div className="truncate text-[11px] font-bold text-slate-700">{variant.variant_name}</div>
-                  <div className="mt-0.5 truncate text-[10px] font-semibold text-orange-600">{formatTsh(variant.variant_price ?? product.sale_price ?? product.price)}</div>
+                  <img src={image.image_url} alt="" className="h-full w-full object-contain p-1" />
                 </div>
               </button>
             ))}
@@ -130,9 +120,17 @@ export function ProductDetailPage({ product, relatedProducts, savedProducts, lan
             </button>
           </div>
           <h1 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">{product.name}</h1>
-          {selectedVariant && (
-            <div className="mt-4 rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-sm">
-              <span className="font-bold text-orange-700">Selected option:</span> {selectedVariant.variant_name}
+          {variants.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-sm font-bold text-slate-700">Choose an option</p>
+              <div className="flex flex-wrap gap-2">
+                {variants.map((variant) => (
+                  <button key={variant.id} type="button" onClick={() => selectVariant(variant)} aria-pressed={selectedVariantId === variant.id}
+                    className={`rounded-lg border px-3 py-2 text-sm font-semibold ${selectedVariantId === variant.id ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-200 text-slate-600'}`}>
+                    {variant.variant_name}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           <p className="mt-4 leading-7 text-slate-600">{product.description}</p>
