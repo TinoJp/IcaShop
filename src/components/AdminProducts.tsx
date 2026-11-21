@@ -5,6 +5,7 @@ import { deleteImage, uploadImage } from '@/lib/imageStorage';
 import { formatTsh } from '@/utils';
 import type { Category, ProductAdmin, ProductVariant } from '@/types';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { parseVariantPrice } from '@/utils/productMedia';
 
 type AdminProductsProps = {
   onBack: () => void;
@@ -275,9 +276,8 @@ export function AdminProducts({ onBack }: AdminProductsProps) {
           const prepared = await Promise.all(variantDrafts.map(async (variant, index) => {
             const imageUrl = variant.file ? await uploadImage(variant.file, 'product', productId) : variant.image_url;
             if (!imageUrl) throw new Error('Every product option must have an image.');
-            const parsedPrice = variant.price.trim() === '' ? null : Number(variant.price);
+            const parsedPrice = parseVariantPrice(variant.price);
             const parsedStock = Number(variant.stock);
-            if (parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0)) throw new Error('Enter a valid option price.');
             if (!Number.isFinite(parsedStock) || parsedStock < 0) throw new Error('Enter a valid option stock quantity.');
             return { variant, index, imageUrl, parsedPrice, parsedStock };
           }));
