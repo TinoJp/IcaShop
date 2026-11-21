@@ -9,6 +9,7 @@ export type ProductVariant = {
   variant_price: number | null;
   variant_stock: number;
 };
+export type ProductImage = { id: string; image_url: string; alt_text: string; display_order: number };
 export type Product = {
   id: string;
   category_id: string;
@@ -19,6 +20,7 @@ export type Product = {
   sale_price: number | null;
   stock: number;
   image_url?: string | null;
+  gallery_images?: ProductImage[];
   variants?: ProductVariant[];
   created_at?: string;
 };
